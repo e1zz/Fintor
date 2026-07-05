@@ -1,0 +1,47 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.mo
+db.sqlite3
+
+# Django
+config/settings_old.backup
+
+# Environment
+.env
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+postgres_data/
+
+# Media
+media/
