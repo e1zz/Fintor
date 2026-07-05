@@ -1480,37 +1480,38 @@ SAT_ENCRYPTION_KEY=your-fernet-key
 
 | Layer | Package | Version | Purpose |
 |-------|---------|---------|---------|
-| **Framework** | Expo | 53+ | React Native framework |
-| **Router** | expo-router | 4+ | File-based routing |
+| **Framework** | React Native | 0.86+ | Mobile framework |
+| **Router** | @react-navigation/native | 7+ | Navigation |
 | **UI** | NativeWind | 4+ | Tailwind CSS for RN |
 | **State (Client)** | Zustand | 5+ | Client state |
 | **State (Server)** | @tanstack/react-query | 5+ | Server state, caching |
 | **Forms** | react-hook-form | 7+ | Form management |
 | **Validation** | zod | 3+ | Schema validation |
 | **HTTP** | fetch (native) | - | API calls |
-| **Auth Storage** | expo-secure-store | - | Secure token storage |
-| **Camera** | expo-image-picker | - | Image selection |
+| **Auth Storage** | react-native-keychain | - | Secure token storage |
+| **Camera** | react-native-image-picker | - | Image selection |
 | **Voice** | @react-native-voice/voice | - | Speech-to-text |
 | **Markdown** | react-native-markdown-display | - | Markdown rendering |
-| **PDF** | expo-print | - | PDF viewing |
+| **PDF** | react-native-print | - | PDF viewing |
 | **Charts** | victory-native | 41+ | Dashboard charts |
-| **Icons** | @expo/vector-icons | - | Icon library |
+| **Icons** | react-native-vector-icons | - | Icon library |
 | **Date** | date-fns | 3+ | Date formatting |
 
 ---
 
 ## 15. Frontend Setup
 
-### 15.1 Create Expo Project
+### 15.1 Create React Native Project
 
 ```bash
-npx create-expo-app@latest prisma-mobile --template tabs
-cd prisma-mobile
+npx @react-native-community/cli init FintorMobile
+cd FintorMobile
 
+npm install @react-navigation/native @react-navigation/native-stack @react-navigation/bottom-tabs
 npm install zustand @tanstack/react-query react-hook-form zod
-npm install expo-secure-store expo-image-picker
+npm install react-native-keychain react-native-image-picker
 npm install @react-native-voice/voice
-npm install react-native-markdown-display expo-print
+npm install react-native-markdown-display react-native-print
 npm install victory-native date-fns
 npm install @react-native-async-storage/async-storage
 
@@ -1546,7 +1547,7 @@ module.exports = {
 ### 15.3 Run Development Server
 
 ```bash
-npx expo start
+npx react-native start
 ```
 
 ---
@@ -1555,7 +1556,7 @@ npx expo start
 
 ```
 prisma-mobile/
-├── app/                              # Expo Router file-based routes
+├── app/                              # Navigation screens
 │   ├── (auth)/                       # Unauthenticated
 │   │   ├── _layout.tsx
 │   │   ├── login.tsx
@@ -2612,19 +2613,19 @@ export function MarkdownText({ content }: { content: string }) {
 | `Observable<T>` | `Promise<T>` |
 | `.subscribe()` | `await` or `.then()` |
 | `AsyncPipe` | TanStack Query `useQuery()` |
-| `Router.navigate()` | `router.push()` (expo-router) |
+| `Router.navigate()` | `navigation.navigate()` (@react-navigation) |
 | `ActivatedRoute` | `useLocalSearchParams()` |
 | `FormsModule` | `react-hook-form` |
 | `*ngIf` | `{condition && <Component />}` |
 | `*ngFor` | `.map()` |
-| `localStorage` | `expo-secure-store` |
+| `localStorage` | `react-native-keychain` |
 | `PrimeNG` | NativeWind + custom components |
 | `Web Speech API` | `@react-native-voice/voice` |
 | `Karma/Jasmine` | Jest + React Native Testing Library |
 | `ng test` | `npm test` or `jest` |
-| `ng build` | `npx expo build` (EAS Build) |
-| `ng serve` | `npx expo start` |
-| `angular.json` | `app.json` |
+| `ng build` | `npx react-native build` |
+| `ng serve` | `npx react-native start` |
+| `angular.json` | `react-native.config.js` |
 | `app.routes.ts` | `app/` directory structure |
 | `core/` | `lib/` + `hooks/` |
 | `features/` | `app/` + `hooks/` + `components/` |

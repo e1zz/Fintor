@@ -6,7 +6,7 @@ Financial SaaS for Mexican PyMEs — CFDI management, expense classification, qu
 
 **Backend** — Django 6.0, Django REST Framework 3.17, PostgreSQL 16, Redis 5, Celery
 
-**Frontend** — React Native (Expo), TypeScript, TanStack React Query, Zustand
+**Frontend** — React Native, TypeScript, TanStack React Query, Zustand
 
 **Services** — Gemini API (expense classification), SW Sapiens (CFDI/PAC), Cloudflare R2 (file storage)
 
@@ -28,5 +28,5 @@ venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000
 
 # Mobile
 cd mobile
-npx expo start
+npx react-native start
 ```
