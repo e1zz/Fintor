@@ -9,6 +9,56 @@ from apps.classification.models import ExpenseCategory, VendorCategoryCache
 
 class DashboardService:
 
+    def get_summary(self, tenant_id, month=None):
+        return self.business(tenant_id, month)
+    def get_recent_invoices(self, tenant_id, limit=5):
+        invoices = SatCfdi.objects.filter(tenant_id=tenant_id).order_by('-issue_date')[:limit]
+        return [{'id': str(i.id), 'number': i.series or '', 'total': float(i.total)} for i in invoices]
+    
+    def get_chart_data(self, tenant_id, chart_type='monthly'):
+        now = timezone.now()
+        start = self._month_start(month=now)
+        end = self._month_end(start)
+
+        if chart_type == 'monthly':
+            data = SatCfdi.objects.filter(
+                tenant_id=tenant_id,
+                issue_date__range=(start, end)
+            ).annotate(month=timezone.localtime('issue_date').month).values('month').annotate(
+                total_sales=Sum('total', filter=Q(document_type='issued')),
+                total_expenses=Sum('total', filter=Q(document_type='received'))
+            ).order_by('month')
+            return list(data)
+        else:
+            return []
+
+    def get_expiring_invoices(self, tenant_id, days=30):
+        now = timezone.now()
+        future_date = now + timedelta(days=days)
+        invoices = SatCfdi.objects.filter(
+            tenant_id=tenant_id,
+            due_date__range=(now, future_date)
+        ).order_by('due_date')
+        return [{'id': str(i.id), 'number': i.series or '', 'due_date': i.due_date.isoformat(), 'total': float(i.total)} for i in invoices]
+
+    def get_pending_documents(self, tenant_id):
+        pending_invoices = SatCfdi.objects.filter(
+            tenant_id=tenant_id,
+            document_type='issued',
+            status='pending'
+        ).count()
+
+        pending_expenses = SatCfdi.objects.filter(
+            tenant_id=tenant_id,
+            document_type='received',
+            status='pending'
+        ).count()
+
+        return {
+            'pending_invoices': pending_invoices,
+            'pending_expenses': pending_expenses
+        }
+
     def business(self, tenant_id, month=None):
         now = timezone.now()
         start = self._month_start(month or now)

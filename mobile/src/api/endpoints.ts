@@ -3,12 +3,12 @@ import * as SecureStore from 'expo-secure-store';
 
 
 export const login = async (email: string, password: string) => {
-    const response = await AxiosInstance.post('auth/login/', {email, password});
+    const response = await AxiosInstance.post('auth/login/', { email, password });
     return response.data;
 };
 
 export const register = async (email: string, first_name: string, last_name: string, company_name: string, rfc: string, password: string) => {
-    const response = await AxiosInstance.post('auth/register/', {email, first_name, last_name, company_name, rfc, password});
+    const response = await AxiosInstance.post('auth/register/', { email, first_name, last_name, company_name, rfc, password });
     return response.data;
 };
 
@@ -22,3 +22,18 @@ export const getAuthMe = async () => {
     const response = await AxiosInstance.get('auth/me/');
     return response.data;
 }
+
+export const getDashboardSummary = async () => {
+    const response = await AxiosInstance.get('dashboard/summary/');
+    return response.data;
+};
+
+export const getDashboardChartData = async (type: string) => {
+    const response = await AxiosInstance.get('dashboard/chart-data/', { params: { type } });
+    return response.data;
+};
+
+export const getRecentInvoices = async (limit: number) => {
+    const response = await AxiosInstance.get('dashboard/recent-invoices/', { params: { limit } });
+    return response.data;
+};
