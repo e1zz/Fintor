@@ -1,3 +1,4 @@
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -29,7 +30,10 @@ def credential_list_create_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def cfdi_list_view(request):
-    cfdis = SatCfdi.objects.filter(tenant=request.user.tenant)
+    tenant = request.user.ensure_tenant_context()
+    if not tenant:
+        return Response({'error': 'No tenant'}, status=status.HTTP_400_BAD_REQUEST)
+    cfdis = SatCfdi.all_objects.filter(tenant=tenant).order_by('-issue_date')
     serializer = SatCfdiSerializer(cfdis, many=True)
     return Response(serializer.data)
 

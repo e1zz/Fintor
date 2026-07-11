@@ -7,7 +7,7 @@ Prisma is a financial SaaS for Mexican PyMEs and sole proprietors. It automates 
 This document provides the complete blueprint for migrating from Laravel + Angular to **Django 5.2 (backend)** + **React Native/Expo (mobile app)**.
 
 **Core features:**
-- SAT CFDI download and parsing (BlueSapiens PAC)
+- SAT CFDI download and parsing (SAT-Go API) + timbrado/cancel (Enlace Fiscal PAC)
 - 5-layer expense classification pipeline (rules + Gemini AI)
 - Ticket capture via Gemini Vision OCR
 - Quotation management with PDF generation
@@ -36,7 +36,6 @@ This document provides the complete blueprint for migrating from Laravel + Angul
 | **Excel** | openpyxl | 3.1 | Spreadsheet export |
 | **QR Codes** | qrcode | 7.4 | Public quotation links |
 | **HTTP Client** | httpx | 0.27 | Async HTTP for APIs |
-| **SOAP** | zeep | 4.2 | SAT FIEL authentication |
 | **XML** | lxml | 5.2 | CFDI XML parsing |
 | **Encryption** | cryptography | 42.0 | SAT password encryption |
 | **Environment** | python-decouple | 3.8 | Environment variables |
@@ -139,10 +138,10 @@ prisma-django/
 │   ├── tenants/                     # Tenant model, onboarding
 │   ├── sat/                         # SAT credentials, CFDI download/parse
 │   │   └── services/
-│   │       ├── sat_ws_service.py    # SAT SOAP integration
-│   │       ├── sw_sapiens_service.py # PAC REST integration
+│   │       ├── sat_go_client.py     # SAT-Go REST: facturas, OC, CSF, dec, info fiscal
+│   │       ├── enlace_fiscal_service.py # PAC: timbrado 4.0, cancel, PDF, correo
 │   │       ├── cfdi_parser.py       # XML parsing
-│   │       └── emission_service.py  # CFDI emission
+│   │       └── emission_service.py  # CFDI emission orchestration
 │   ├── classification/              # Expense categories, vendor rules
 │   ├── vendors/                     # Vendor model
 │   ├── tickets/                     # Ticket images + expenses
@@ -1248,23 +1247,36 @@ def classify(cfdi):
 
 - `stream_xlsx(filename, headers, rows, column_types)` - Generates .xlsx with openpyxl
 
-### 9.14 SatWsService (`apps/sat/services/sat_ws_service.py`)
+### 9.14 SatGoClient (`apps/sat/services/sat_go_client.py`)
 
-- `query(credential, download_type, date_from, date_to)` - Requests download from SAT
-- `verify(credential, request_id)` - Checks status
-- `download(credential, package_id)` - Downloads ZIP
+REST client for SAT-Go API — handles FIEL and CIEC auth, CFDI downloads, OC, CSF, declaraciones, and fiscal info.
+
+- `create_key(portal_token)` - Generates API key from portal token
+- `generate_token(api_key)` - Gets JWT from API key
+- `consultar_facturas(rfc, date_from, date_to, auth_type, ...)` - Invoice queries (FIEL multipart or CIEC header)
+- `descargar_oc(rfc, auth_type, ...)` - Opinión de Cumplimiento PDF → base64
+- `descargar_csf(rfc, auth_type, ...)` - Constancia Situación Fiscal PDF → base64
+- `descargar_dec(rfc, auth_type, ...)` - Declaraciones ZIP → base64
+- `consultar_info_fiscal(rfc, auth_type, ...)` - Fiscal info JSON
+
+FIEL: multipart POST with `.key` + `.cer` files. CIEC: `Secret` header.
 
 ### 9.15 SatCfdiParser (`apps/sat/services/cfdi_parser.py`)
 
 - `parse(xml_content)` - Parses CFDI 4.0 XML via lxml + XPath
 
-### 9.16 SwSapiensService (`apps/sat/services/sw_sapiens_service.py`)
+### 9.16 EnlaceFiscalService (`apps/sat/services/enlace_fiscal_service.py`)
 
-- `timbrar(payload)` - Stamps CFDI via PAC
-- `cancelar(uuid, motivo, folio_sustituto)` - Cancels CFDI
-- `consultar_estatus(uuid)` - Checks status
-- `validar_conexion()` - Tests connection
-- `generar_pdf(xml_content, extras)` - Generates PDF
+PAC REST client for CFDI 4.0 timbrado, cancel, and PDF generation. Replaces SW Sapiens.
+
+- `timbrar(cfdi_payload)` - Stamps CFDI 4.0 via `POST /v6/generarCfdi`
+- `cancelar(uuid, motivo, folio_sustituto)` - Cancels CFDI via `POST /v6/cancelarCfdi`
+- `consultar_estatus(uuid)` - Gets CFDI info via `POST /v6/informacionCfdi`
+- `probar_conexion()` - Tests connection via `POST /v6/probarConexion`
+- `obtener_saldo()` - Account balance via `POST /v6/obtenerSaldo`
+- `enviar_correo(uuid, email)` - Sends CFDI email
+
+Auth: HTTP Basic (user:token) + `x-api-key` header.
 
 ### 9.17 TicketParsingService (`apps/tickets/services/parsing_service.py`)
 
@@ -1352,20 +1364,23 @@ def sat_download_task(self, credential_id, download_type, date_from, date_to):
     credential = SatCredential.objects.get(id=credential_id)
     request = SatDownloadRequest.objects.create(...)
     
-    # Query SAT
-    request_id = SatWsService().query(credential, download_type, date_from, date_to)
+    client = SatGoClient()
     
-    # Poll/verify (up to 10 attempts)
-    for attempt in range(10):
-        result = SatWsService().verify(credential, request_id)
-        if result['status'] == 'finished':
-            break
-        time.sleep(2 ** attempt)
+    # Authenticate: FIEL (multipart) or CIEC (header)
+    client.auth(credential)
     
-    # Download packages
-    for package_id in package_ids:
-        zip_content = SatWsService().download(credential, package_id)
-        # Parse ZIP, save CFDIs, dispatch classify_cfdi_task
+    # Download facturas as JSON from SAT-Go
+    facturas = client.consultar_facturas(
+        credential.rfc,
+        date_from.isoformat(),
+        date_to.isoformat(),
+    )
+    
+    # Parse each CFDI, save, dispatch classification
+    parser = SatCfdiParser()
+    for factura in facturas:
+        cfdi = parser.parse_and_save(factura, credential, request)
+        classify_cfdi_task.delay(cfdi.id)
 ```
 
 ---
@@ -1403,16 +1418,23 @@ def on_cfdi_created(sender, instance, created, **kwargs):
 
 ## 12. External Integrations
 
-### 12.1 SAT SOAP (`apps/sat/services/sat_ws_service.py`)
-
-- Library: `zeep`
-- Load FIEL certificates, decrypt password, sign XML, authenticate, download
-
-### 12.2 SW Sapiens PAC (`apps/sat/services/sw_sapiens_service.py`)
+### 12.1 SAT-Go (`apps/sat/services/sat_go_client.py`)
 
 - Library: `httpx`
-- Endpoints: `/v3/cfdi33/issue/json/v4`, `/v3/cfdi33/cancel`, `/v3/cfdi33/status/{uuid}`, `/v3/cfdi33/pdf`
-- Auth: Bearer token
+- Third-party API proxy for SAT (Mexican tax authority)
+- Modules: auth, facturas, oc, csf, dec, info_fiscal
+- Auth methods: FIEL (multipart POST with `.key` + `.cer`) or CIEC (header)
+- File responses: `{"pdf_base64": "...", "file_name": "...", "content_type": "..."}`
+- See [AUDIT.md](AUDIT.md) for full module documentation
+
+### 12.2 Enlace Fiscal PAC (`apps/sat/services/enlace_fiscal_service.py`)
+
+- Library: `httpx`
+- Base URL: `https://api.enlacefiscal.com/v6`
+- Key endpoints: `/generarCfdi` (timbrado 4.0), `/cancelarCfdi`, `/informacionCfdi`, `/listarComprobantes`, `/enviarCorreo`
+- Auth: HTTP Basic (`user:token`) + `x-api-key` header
+- Also: CFDI 4.0 timbrado, REP 2.0, retenciones, carta porte 3.1, PDF layouts, catálogos SAT
+- Docs: https://developer.enlacefiscal.com/
 
 ### 12.3 Gemini AI (`services/gemini_service.py`)
 
@@ -1461,16 +1483,57 @@ GEMINI_API_KEY=your-gemini-api-key
 GEMINI_MODEL=gemini-2.0-flash
 GEMINI_VISION_MODEL=gemini-1.5-pro-latest
 
-# SW Sapiens
-SW_SAPIENS_URL=https://test.swsapiens.com.mx
-SW_SAPIENS_TOKEN=your-token
-SW_SAPIENS_USER=your-user
-SW_SAPIENS_PASSWORD=your-password
-SW_SAPIENS_PDF_URL=https://test.swsapiens.com.mx
+# Enlace Fiscal PAC
+ENLACE_FISCAL_URL=https://api.enlacefiscal.com
+ENLACE_FISCAL_API_KEY=your-api-key
+ENLACE_FISCAL_USER=your-rfc
+ENLACE_FISCAL_PASSWORD=your-token
+
+# SAT-Go
+SAT_GO_BASE_URL=
+SAT_GO_API_KEY=
 
 # SAT Encryption
 SAT_ENCRYPTION_KEY=your-fernet-key
 ```
+
+---
+
+## 13.5 SAT-Go Python Client — Audit (from AUDIT.md)
+
+A Flask proxy that wraps the SAT-Go API (Mexican tax authority). Takes simple form inputs from a web UI, calls the real SAT-Go endpoints via `requests`, and returns results as JSON.
+
+**Architecture:** Flask app → SAT-Go API → SAT servers
+
+| Module | Endpoint | Returns |
+|--------|----------|---------|
+| auth | `POST /api/auth/crear-key` | API Key from portal token |
+| auth | `POST /api/auth/generar-token` | JWT from API Key |
+| facturas | `POST /api/facturas/consultar` | Invoice list (JSON) |
+| oc | `POST /api/oc/descargar` | Opinión de Cumplimiento (PDF base64) |
+| csf | `POST /api/csf/descargar` | Constancia Situación Fiscal (PDF base64) |
+| dec | `POST /api/dec/descargar` | Declaraciones (ZIP base64) |
+| info_fiscal | `POST /api/info-fiscal/consultar` | Fiscal info (JSON) |
+
+Each module supports two auth methods:
+- **FIEL**: multipart POST with `.key` + `.cer` files
+- **CIEC**: GET request with `Secret` header
+
+**Django Port Files:**
+```
+config.py          — SAT-Go URLs
+views.py           — 6 views (auth, facturas, oc, csf, dec, info_fiscal)
+urls.py            — URL patterns
+sat_client.py      — HTTP calls to SAT-Go (the services/ logic)
+```
+
+**Key notes:**
+- BASE_URL must be configured before anything works
+- SSL disabled (verify=False) — needs proper certs in production
+- FIEL requires file uploads → React Native needs file picking + FormData
+- PDF/ZIP as base64 JSON responses
+- All routes are POST (even CIEC queries)
+- `requests` only — no async, no connection pooling, no retry logic (consider httpx for production)
 
 ---
 

@@ -57,3 +57,13 @@ class AuthService:
             'user': UserSerializer(user).data,
             'tenant': TenantSerializer(user.tenant).data if user.tenant else None,
         }
+
+    # ponytail: unsecured reset (email + new password only); add token/email when shipping
+    def reset_password(self, data):
+        try:
+            user = User.objects.get(email=data['email'])
+        except User.DoesNotExist:
+            raise ValueError('User not found')
+        user.set_password(data['password'])
+        user.save(update_fields=['password'])
+        return {'detail': 'Password updated'}

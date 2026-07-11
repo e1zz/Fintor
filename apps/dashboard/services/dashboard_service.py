@@ -1,36 +1,68 @@
 from datetime import datetime, timedelta
 
 from django.utils import timezone
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum
 
 from apps.sat.models import SatCfdi
-from apps.classification.models import ExpenseCategory, VendorCategoryCache
 
 
 class DashboardService:
 
     def get_summary(self, tenant_id, month=None):
         return self.business(tenant_id, month)
-    def get_recent_invoices(self, tenant_id, limit=5):
-        invoices = SatCfdi.objects.filter(tenant_id=tenant_id).order_by('-issue_date')[:limit]
-        return [{'id': str(i.id), 'number': i.series or '', 'total': float(i.total)} for i in invoices]
-    
-    def get_chart_data(self, tenant_id, chart_type='monthly'):
-        now = timezone.now()
-        start = self._month_start(month=now)
-        end = self._month_end(start)
 
-        if chart_type == 'monthly':
-            data = SatCfdi.objects.filter(
-                tenant_id=tenant_id,
-                issue_date__range=(start, end)
-            ).annotate(month=timezone.localtime('issue_date').month).values('month').annotate(
-                total_sales=Sum('total', filter=Q(document_type='issued')),
-                total_expenses=Sum('total', filter=Q(document_type='received'))
-            ).order_by('month')
-            return list(data)
-        else:
-            return []
+    def get_recent_invoices(self, tenant_id, limit=5):
+        invoices = (
+            SatCfdi.all_objects.filter(tenant_id=tenant_id)
+            .order_by('-issue_date')[:limit]
+        )
+        return [
+            {
+                'id': str(i.id),
+                'number': i.receiver_name
+                if i.document_type == 'issued'
+                else i.sender_name,
+                'total': float(i.total),
+            }
+            for i in invoices
+        ]
+
+    def get_chart_data(self, tenant_id, chart_type='monthly'):
+        # Shape for react-native-chart-kit BarChart
+        now = timezone.now()
+        labels = []
+        sales_points = []
+
+        for months_ago in range(5, -1, -1):
+            month = now.month - months_ago
+            year = now.year
+            while month <= 0:
+                month += 12
+                year -= 1
+            start = now.replace(
+                year=year, month=month, day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+            end = self._month_end(start)
+            labels.append(start.strftime('%b'))
+
+            sales = (
+                SatCfdi.all_objects.filter(
+                    tenant_id=tenant_id,
+                    document_type='issued',
+                    issue_date__range=(start, end),
+                ).aggregate(total=Sum('total'))['total']
+                or 0
+            )
+            sales_points.append(float(sales))
+
+        # chart-kit breaks on all-zero / length mismatch
+        if not any(sales_points):
+            sales_points = [0] * len(labels)
+
+        return {
+            'labels': labels,
+            'datasets': [{'data': sales_points}],
+        }
 
     def get_expiring_invoices(self, tenant_id, days=30):
         now = timezone.now()
@@ -64,13 +96,13 @@ class DashboardService:
         start = self._month_start(month or now)
         end = self._month_end(start)
 
-        sales = SatCfdi.objects.filter(
+        sales = SatCfdi.all_objects.filter(
             tenant_id=tenant_id,
             document_type='issued',
             issue_date__range=(start, end),
         ).aggregate(total=Sum('total'))['total'] or 0
 
-        expenses = SatCfdi.objects.filter(
+        expenses = SatCfdi.all_objects.filter(
             tenant_id=tenant_id,
             document_type='received',
             issue_date__range=(start, end),

@@ -3,21 +3,20 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
-import { useAuth } from '../../hooks/useAuth';
+import { resetPassword } from '../../api/endpoints';
 import { getApiError } from '../../api/client';
 
-type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
+type Nav = NativeStackNavigationProp<AuthStackParamList, 'ResetPassword'>;
 
-export default function LoginScreen() {
-  const navigation = useNavigation<LoginNav>();
+export default function ResetPasswordScreen() {
+  const navigation = useNavigation<Nav>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
 
-  const { login } = useAuth();
-
-  const handleLogin = async () => {
+  const handleReset = async () => {
     if (!email || !password) {
       setError('Please fill in all fields');
       return;
@@ -25,9 +24,10 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
+      await resetPassword(email, password);
+      setDone(true);
     } catch (e: any) {
-      setError(getApiError(e, 'Login failed'));
+      setError(getApiError(e, 'Reset failed'));
     } finally {
       setLoading(false);
     }
@@ -39,10 +39,11 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.inner}>
-        <Text style={styles.title}>Fintor</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+        <Text style={styles.title}>Reset password</Text>
+        <Text style={styles.subtitle}>Enter your email and a new password</Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {done ? <Text style={styles.success}>Password updated. You can sign in.</Text> : null}
 
         <TextInput
           style={styles.input}
@@ -54,10 +55,9 @@ export default function LoginScreen() {
           autoCapitalize="none"
           autoCorrect={false}
         />
-
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder="New password"
           placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
@@ -66,22 +66,18 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
+          onPress={handleReset}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
+            <Text style={styles.buttonText}>Update password</Text>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('ResetPassword')}>
-          <Text style={styles.link}>Forgot password?</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.link}>Don't have an account? Sign up</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.link}>Back to sign in</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -89,10 +85,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
   inner: {
     flex: 1,
     justifyContent: 'center',
@@ -100,7 +93,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#1a73e8',
     marginBottom: 8,
@@ -109,6 +102,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 32,
+    textAlign: 'center',
   },
   input: {
     width: '100%',
@@ -130,22 +124,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d32f2f',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  link: {
-    color: '#1a73e8',
-    marginTop: 24,
-    fontSize: 14,
-  },
+  buttonDisabled: { opacity: 0.7 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  error: { color: '#d32f2f', marginBottom: 16, textAlign: 'center' },
+  success: { color: '#2e7d32', marginBottom: 16, textAlign: 'center' },
+  link: { color: '#1a73e8', marginTop: 24, fontSize: 14 },
 });

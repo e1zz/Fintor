@@ -3,7 +3,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
+from .serializers import (
+    RegisterSerializer,
+    LoginSerializer,
+    ResetPasswordSerializer,
+    UserSerializer,
+)
 from .services import AuthService
 
 auth_service = AuthService()
@@ -31,6 +36,18 @@ def login_view(request):
         return Response(result)
     except ValueError as e:
         return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password_view(request):
+    serializer = ResetPasswordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    try:
+        result = auth_service.reset_password(serializer.validated_data)
+        return Response(result)
+    except ValueError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

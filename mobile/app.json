@@ -29,10 +29,13 @@
       "predictiveBackGestureEnabled": false
     },
     "extra": {
-      "apiBaseUrl": "http://192.168.1.64:8000/api/v1/"
+      "apiBaseUrl": "http://192.168.1.68:8000/api/v1/"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

@@ -12,6 +12,11 @@ export const register = async (email: string, first_name: string, last_name: str
     return response.data;
 };
 
+export const resetPassword = async (email: string, password: string) => {
+    const response = await AxiosInstance.post('auth/reset-password/', { email, password });
+    return response.data;
+};
+
 export const logout = async () => {
     const refreshToken = await SecureStore.getItemAsync('refresh_token');
     const response = await AxiosInstance.post('auth/logout/', { refresh: refreshToken });
@@ -35,5 +40,21 @@ export const getDashboardChartData = async (type: string) => {
 
 export const getRecentInvoices = async (limit: number) => {
     const response = await AxiosInstance.get('dashboard/recent-invoices/', { params: { limit } });
+    return response.data;
+};
+
+
+export type Cfdi = {
+    id: number;
+    uuid: string;
+    document_type: 'issued' | 'received';
+    sender_name: string;
+    receiver_name: string;
+    total: string | number;
+    issue_date: string | null;
+};
+
+export const getCfdis = async (): Promise<Cfdi[]> => {
+    const response = await AxiosInstance.get('sat/cfdis/');
     return response.data;
 };

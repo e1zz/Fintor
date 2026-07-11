@@ -4,6 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
 import { useAuth } from '../../hooks/useAuth';
+import { getApiError } from '../../api/client';
 
 type RegisterNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -37,7 +38,7 @@ export default function RegisterScreen() {
     try {
       await register(email, first_name, last_name, company_name, rfc, password);
     } catch (e: any) {
-      setError(e?.response?.data?.error || e?.message || 'Registration failed');
+      setError(getApiError(e, 'Registration failed'));
     } finally {
       setLoading(false);
     }

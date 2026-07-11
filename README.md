@@ -1,32 +1,64 @@
 # Fintor
 
-Financial SaaS for Mexican PyMEs — CFDI management, expense classification, quotations, and financial dashboards.
+Financial SaaS for Mexican PyMEs — CFDI, expenses, quotations, dashboards.
 
-## Stack
+| Layer | Stack |
+|-------|--------|
+| API | Django 6 + DRF + JWT |
+| DB / queue | PostgreSQL 16, Redis, Celery |
+| Mobile | Expo 54 (React Native) + React Query + Zustand |
+| External | Gemini, SW Sapiens (PAC), Cloudflare R2 |
 
-**Backend** — Django 6.0, Django REST Framework 3.17, PostgreSQL 16, Redis 5, Celery
+## Prerequisites
 
-**Frontend** — React Native, TypeScript, TanStack React Query, Zustand
+- Docker Desktop
+- Node 20+
+- Expo Go on a phone, or an emulator
 
-**Services** — Gemini API (expense classification), SW Sapiens (CFDI/PAC), Cloudflare R2 (file storage)
-
-## Architecture
-
-- Multitenant SaaS — each tenant scoped via `TenantManager` + `EnsureTenantContext` middleware
-- JWT auth via `djangorestframework-simplejwt`
-- 20 models across 13 apps: accounts, tenants, sat, customers, vendors, products, quotations, tickets, classification, notifications, chat, dashboard, common
-- Celery for async tasks (CFDI sync, notifications, classification)
-
-## Quick Start
+## 1. Configure
 
 ```bash
-# Backend
-cp .env.example .env        # edit credentials
-docker compose up -d db redis
-venv\Scripts\python.exe manage.py migrate
-venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000
-
-# Mobile
-cd mobile
-npx react-native start
+cp .env.example .env
+# edit DB_*, SECRET_KEY, and any API keys you need
 ```
+
+## 2. Start backend (API + DB + Redis + Celery)
+
+```bash
+docker compose up -d --build
+docker compose exec web python manage.py migrate
+# optional:
+docker compose exec web python manage.py createsuperuser
+```
+
+| Service | URL / port |
+|---------|------------|
+| API | http://localhost:8000 |
+| Postgres | localhost:5432 |
+| Redis | localhost:6379 |
+
+Stop: `docker compose down`
+
+## 3. Start mobile
+
+```bash
+cd mobile
+npm install
+npm start
+```
+
+Then press `a` (Android), `i` (iOS), or scan the QR with Expo Go.
+
+API base URL defaults to `http://localhost:8000/api/v1/` (see `mobile/src/api/client.ts`).  
+Physical device: set `extra.apiBaseUrl` in `mobile/app.json` to your machine LAN IP, e.g. `http://192.168.x.x:8000/api/v1/`.
+
+## Useful commands
+
+```bash
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+docker compose logs -f web celery
+docker compose restart web
+```
+
+Migration blueprint / schema notes: [SETUP.md](SETUP.md).

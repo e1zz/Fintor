@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { clearTokens } from '../api/client';
 import { login as loginApi, register as registerApi, logout as logoutApi, getAuthMe } from '../api/endpoints';
 
 interface AuthState {
@@ -22,17 +23,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     loadUser: async () => {
         try {
             const token = await SecureStore.getItemAsync('access_token');
-            if (!token){
-                set({ isLoading: false });
+            if (!token) {
+                set({ isLoading: false, isAuthenticated: false });
                 return;
             }
-            
+
             set({ token });
             const user = await getAuthMe();
-            set({ user, isAuthenticated: true, isLoading: false }); 
-            
-        
-        } catch (error) {
+            set({ user, isAuthenticated: true, isLoading: false });
+        } catch {
+            await clearTokens();
             set({ user: null, token: null, isAuthenticated: false, isLoading: false });
         }
     },
@@ -63,12 +63,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     logout: async () => {
         try {
             await logoutApi();
-            await SecureStore.deleteItemAsync('access_token');
-            await SecureStore.deleteItemAsync('refresh_token');
-            set({ user: null, token: null, isAuthenticated: false });
-        } catch (error) {
-            throw error;
+        } catch {
+            // still clear local session
         }
+        await clearTokens();
+        set({ user: null, token: null, isAuthenticated: false });
     },
 
 }));
