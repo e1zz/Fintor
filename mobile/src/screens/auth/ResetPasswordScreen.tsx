@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
@@ -35,18 +35,18 @@ export default function ResetPasswordScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      className='flex-1 bg-bg'
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.inner}>
-        <Text style={styles.title}>Reset password</Text>
-        <Text style={styles.subtitle}>Enter your email and a new password</Text>
+      <ScrollView contentContainerClassName='flex-grow items-center justify-start p-6 pt-20' keyboardShouldPersistTaps='handled'>
+        <Text className='text-2xl font-bold text-gray-900 mb-2'>Reset password</Text>
+        <Text className='text-lg text-gray-600 mb-2'>Enter your email and a new password</Text>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {done ? <Text style={styles.success}>Password updated. You can sign in.</Text> : null}
+        {error ? <Text className='text-red-500'>{error}</Text> : null}
+        {done ? <Text className='text-green-500'>Password updated. You can sign in.</Text> : null}
 
         <TextInput
-          style={styles.input}
+          className='mt-4 input-field'
           placeholder="Email"
           placeholderTextColor="#999"
           value={email}
@@ -56,7 +56,7 @@ export default function ResetPasswordScreen() {
           autoCorrect={false}
         />
         <TextInput
-          style={styles.input}
+          className='mt-4 input-field'
           placeholder="New password"
           placeholderTextColor="#999"
           value={password}
@@ -64,69 +64,22 @@ export default function ResetPasswordScreen() {
           secureTextEntry
         />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleReset}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Update password</Text>
-          )}
-        </TouchableOpacity>
+          <Pressable
+            className='mt-5 bg-primary py-4 px-12 rounded-full'
+            onPress={handleReset}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className='text-white font-semibold'>Update Password</Text>
+            )}
+          </Pressable>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.link}>Back to sign in</Text>
-        </TouchableOpacity>
-      </View>
+        <Pressable onPress={() => navigation.navigate('Login')}>
+          <Text className='text-blue-500 underline mt-4'>Back to sign in</Text>
+        </Pressable>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a73e8',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: '#fafafa',
-  },
-  button: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  error: { color: '#d32f2f', marginBottom: 16, textAlign: 'center' },
-  success: { color: '#2e7d32', marginBottom: 16, textAlign: 'center' },
-  link: { color: '#1a73e8', marginTop: 24, fontSize: 14 },
-});

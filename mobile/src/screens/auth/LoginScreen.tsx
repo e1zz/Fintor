@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput,ScrollView, Image, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { getApiError } from '../../api/client';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen() {
   const navigation = useNavigation<LoginNav>();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,118 +37,57 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
+    <KeyboardAvoidingView className='flex-1 bg-bg'
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.inner}>
-        <Text style={styles.title}>Fintor</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+      <ScrollView contentContainerClassName='flex-grow items-center justify-start p-6 pt-20' keyboardShouldPersistTaps='handled'>
+          <Image source={require('../../../assets/favicon.png')} className='w-12 h-12 mb-6 mt-10' />
+          <Text className='text-4xl font-bold text-gray-900 mb-2'>Fintor</Text>
+          <Text className='text-lg text-gray-600 mb-2'>Sign in to your account</Text>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text className='text-red-500'>{error}</Text> : null}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+          <TextInput
+            className='mt-4 input-field'
+            placeholder="Email"
+            placeholderTextColor="#999"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+          <TextInput
+            className='mt-4 input-field'
+            placeholder="Password"
+            placeholderTextColor="#999"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
+          <Pressable
+            className='mt-5 bg-primary py-4 px-12 rounded-full'
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className='text-white font-semibold'>Sign In</Text>
+            )}
+          </Pressable>
 
-        <TouchableOpacity onPress={() => navigation.navigate('ResetPassword')}>
-          <Text style={styles.link}>Forgot password?</Text>
-        </TouchableOpacity>
+          <Pressable onPress={() => navigation.navigate('ResetPassword')}>
+            <Text className='mt-4 text-blue-500 underline'>Forgot password?</Text>
+          </Pressable>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.link}>Don't have an account? Sign up</Text>
-        </TouchableOpacity>
-      </View>
+          <Pressable onPress={() => navigation.navigate('Register')}>
+            <Text className='mt-4 text-blue-500 underline'>Don't have an account? Sign up</Text>
+          </Pressable>
+      </ScrollView>
+
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#1a73e8',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: '#fafafa',
-  },
-  button: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d32f2f',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  link: {
-    color: '#1a73e8',
-    marginTop: 24,
-    fontSize: 14,
-  },
-});

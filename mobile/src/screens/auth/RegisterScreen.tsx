@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { getApiError } from '../../api/client';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type RegisterNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen() {
   const navigation = useNavigation<RegisterNav>();
+  const insets = useSafeAreaInsets();
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -46,31 +48,31 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      className='flex-1 bg-bg'
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Set up your business account</Text>
+      <ScrollView contentContainerClassName='flex-grow items-center justify-start p-6 pt-20' keyboardShouldPersistTaps='handled'>
+        <Text className='text-4xl font-bold text-gray-900 mb-2'>Create Account</Text>
+        <Text className='text-lg text-gray-600 mb-2'>Set up your business account</Text>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text className='text-red-500'>{error}</Text> : null}
 
         <TextInput
-          style={styles.input}
+          className='mt-4 input-field'
           placeholder="First Name"
           placeholderTextColor="#999"
           value={form.first_name}
           onChangeText={v => updateField('first_name', v)}
         />
         <TextInput
-          style={styles.input}
+          className='mt-4 input-field'
           placeholder="Last Name"
           placeholderTextColor="#999"
           value={form.last_name}
           onChangeText={v => updateField('last_name', v)}
         />
         <TextInput
-          style={styles.input}
+          className='mt-4 input-field'
           placeholder="Email"
           placeholderTextColor="#999"
           value={form.email}
@@ -79,14 +81,14 @@ export default function RegisterScreen() {
           autoCapitalize="none"
         />
         <TextInput
-          style={styles.input}
+          className='mt-4 input-field'
           placeholder="Company Name"
           placeholderTextColor="#999"
           value={form.company_name}
           onChangeText={v => updateField('company_name', v)}
         />
         <TextInput
-          style={styles.input}
+          className='mt-4 input-field'
           placeholder="RFC"
           placeholderTextColor="#999"
           value={form.rfc}
@@ -94,7 +96,7 @@ export default function RegisterScreen() {
           autoCapitalize="characters"
         />
         <TextInput
-          style={styles.input}
+          className='mt-4 input-field'
           placeholder="Password"
           placeholderTextColor="#999"
           value={form.password}
@@ -102,86 +104,23 @@ export default function RegisterScreen() {
           secureTextEntry
         />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Create Account</Text>
-          )}
-        </TouchableOpacity>
+          <Pressable
+            className='mt-5 bg-primary py-4 px-12 rounded-full'
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className='text-white font-semibold'>Create Account</Text>
+            )}
+          </Pressable>
 
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.link}>Already have an account? Sign in</Text>
-        </TouchableOpacity>
+        <Pressable onPress={() => navigation.goBack()}>
+          <Text className='text-blue-500 underline mt-4'>Already have an account? Sign in</Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  inner: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a73e8',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: '#fafafa',
-  },
-  button: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  error: {
-    color: '#d32f2f',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  link: {
-    color: '#1a73e8',
-    marginTop: 24,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-});
