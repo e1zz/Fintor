@@ -20,10 +20,10 @@ import RegisterScreen from './src/screens/auth/RegisterScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import DashboardScreen from './src/screens/dashboard/DashboardScreen';
 import CfdisScreen from './src/screens/cfdis/CfdisScreen';
-import TaxScreen from './src/screens/tax/TaxScreen';
+import TaxScreen from './src/settings/tax/TaxScreen';
 import SettingsScreen from './src/settings/SettingsScreen';
 import SettingsProfileScreen from './src/settings/profile/profileScreen';
-import SettingsTaxScreen from './src/settings/tax/TaxScreen';
+import TaxRegimeScreen from './src/settings/taxRegime/TaxRegimeScreen';
 import SettingsSatScreen from './src/settings/satSettings/SatSettingsScreen';
 import SettingsStorage from './src/settings/storage/StorageScreen';
 import SettingsAppInfoScreen from './src/settings/appInfo/AppInfoScreen';
@@ -77,7 +77,7 @@ function SettingsStack() {
     <SettingsStackNav.Navigator screenOptions={{ headerShown: false }}>
       <SettingsStackNav.Screen name="SettingsHome" component={SettingsScreen} />
       <SettingsStackNav.Screen name="SettingsProfile" component={SettingsProfileScreen} />
-      <SettingsStackNav.Screen name="SettingsTaxRegime" component={SettingsTaxScreen} />
+      <SettingsStackNav.Screen name="SettingsTaxRegime" component={TaxRegimeScreen} />
       <SettingsStackNav.Screen name="SettingsSatCredentials" component={SettingsSatScreen} />
       <SettingsStackNav.Screen name="SettingsStorageScreen" component={SettingsStorage} />
       <SettingsStackNav.Screen name="SettingsAppInfo" component={SettingsAppInfoScreen} />

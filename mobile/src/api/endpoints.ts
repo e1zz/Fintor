@@ -67,3 +67,28 @@ export const getCfdis = async (): Promise<Cfdi[]> => {
     const response = await AxiosInstance.get('sat/cfdis/');
     return response.data;
 };
+
+export type SatCredential = {
+    id: number;
+    rfc: string;
+    cer_path: string;
+    key_path: string;
+    valid_until: string | null;
+    is_active: boolean;
+};
+
+export const getSatCredentials = async (): Promise<SatCredential[]> => {
+    const response = await AxiosInstance.get('sat/credentials/');
+    return response.data;
+};
+
+export type TaxRegimeCode = 'resico_pf' | 'pfae' | 'professional_fees' | 'resico_pm';
+
+export const updateBusinessInfo = async (data: {
+    business_type?: string;
+    business_description?: string;
+    tax_regime?: TaxRegimeCode | string;
+}) => {
+    const response = await AxiosInstance.post('tenants/business-info/', data);
+    return response.data;
+};
