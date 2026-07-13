@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
@@ -39,11 +39,11 @@ export default function ResetPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerClassName='flex-grow items-center justify-start p-6 pt-20' keyboardShouldPersistTaps='handled'>
-        <Text className='text-2xl font-bold text-gray-900 mb-2'>Reset password</Text>
-        <Text className='text-lg text-gray-600 mb-2'>Enter your email and a new password</Text>
+        <Text className='text-2xl font-bold text-ink mb-2'>Reset password</Text>
+        <Text className='text-lg text-muted mb-2'>Enter your email and a new password</Text>
 
-        {error ? <Text className='text-red-500'>{error}</Text> : null}
-        {done ? <Text className='text-green-500'>Password updated. You can sign in.</Text> : null}
+        {error ? <Text className='text-danger'>{error}</Text> : null}
+        {done ? <Text className='text-success'>Password updated. You can sign in.</Text> : null}
 
         <TextInput
           className='mt-4 input-field'
@@ -77,7 +77,7 @@ export default function ResetPasswordScreen() {
           </Pressable>
 
         <Pressable onPress={() => navigation.navigate('Login')}>
-          <Text className='text-blue-500 underline mt-4'>Back to sign in</Text>
+          <Text className='text-primary underline mt-4'>Back to sign in</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

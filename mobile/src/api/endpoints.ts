@@ -48,10 +48,19 @@ export type Cfdi = {
     id: number;
     uuid: string;
     document_type: 'issued' | 'received';
+    sender_rfc: string;
     sender_name: string;
+    receiver_rfc: string;
     receiver_name: string;
+    subtotal: string | number;
     total: string | number;
+    iva_withholding: string | number | null;
+    isr_withholding: string | number | null;
+    currency: string;
     issue_date: string | null;
+    status: string | null;
+    review_status: 'none' | 'pending' | 'confirmed' | null;
+    category: number | null;
 };
 
 export const getCfdis = async (): Promise<Cfdi[]> => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
@@ -52,10 +52,10 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerClassName='flex-grow items-center justify-start p-6 pt-20' keyboardShouldPersistTaps='handled'>
-        <Text className='text-4xl font-bold text-gray-900 mb-2'>Create Account</Text>
-        <Text className='text-lg text-gray-600 mb-2'>Set up your business account</Text>
+        <Text className='text-4xl font-bold text-ink mb-2'>Create Account</Text>
+        <Text className='text-lg text-muted mb-2'>Set up your business account</Text>
 
-        {error ? <Text className='text-red-500'>{error}</Text> : null}
+        {error ? <Text className='text-danger'>{error}</Text> : null}
 
         <TextInput
           className='mt-4 input-field'
@@ -63,7 +63,7 @@ export default function RegisterScreen() {
           placeholderTextColor="#999"
           value={form.first_name}
           onChangeText={v => updateField('first_name', v)}
-        />
+        />``
         <TextInput
           className='mt-4 input-field'
           placeholder="Last Name"
@@ -105,7 +105,7 @@ export default function RegisterScreen() {
         />
 
           <Pressable
-            className='mt-5 bg-primary py-4 px-12 rounded-full'
+            className='mt-5 btn-primary'
             onPress={handleRegister}
             disabled={loading}
           >
@@ -117,7 +117,7 @@ export default function RegisterScreen() {
           </Pressable>
 
         <Pressable onPress={() => navigation.goBack()}>
-          <Text className='text-blue-500 underline mt-4'>Already have an account? Sign in</Text>
+          <Text className='text-primary underline mt-4'>Already have an account? Sign in</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

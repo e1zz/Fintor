@@ -30,6 +30,7 @@ mobile/web-build/
 # IDE
 .vscode/
 .idea/
+.opencode/
 *.swp
 *.swo
 

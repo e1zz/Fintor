@@ -1,4 +1,4 @@
-import './global.css';
+import "./global.css";
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, View } from 'react-native';
@@ -12,7 +12,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from './src/stores/authStore';
-import type { AuthStackParamList, MainTabParamList } from './src/types/navigation';
+import type { AuthStackParamList, MainTabParamList, SettingsStackParamList } from './src/types/navigation';
 
 import SageAIScreen from './src/screens/SageAI/SageAIScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
@@ -20,10 +20,16 @@ import RegisterScreen from './src/screens/auth/RegisterScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import DashboardScreen from './src/screens/dashboard/DashboardScreen';
 import CfdisScreen from './src/screens/cfdis/CfdisScreen';
-import QuotationsScreen from './src/screens/quotations/QuotationsScreen';
-import TicketsScreen from './src/screens/tickets/TicketsScreen';
+import TaxScreen from './src/screens/tax/TaxScreen';
+import SettingsScreen from './src/settings/SettingsScreen';
+import SettingsProfileScreen from './src/settings/profile/profileScreen';
+import SettingsTaxScreen from './src/settings/tax/TaxScreen';
+import SettingsSatScreen from './src/settings/satSettings/SatSettingsScreen';
+import SettingsStorage from './src/settings/storage/StorageScreen';
+import SettingsAppInfoScreen from './src/settings/appInfo/AppInfoScreen';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
+const SettingsStackNav = createNativeStackNavigator<SettingsStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const queryClient = new QueryClient();
 
@@ -41,8 +47,8 @@ const TAB_ICONS: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> 
   Dashboard: 'home-outline',
   CFDIs: 'document-text-outline',
   Sage: 'sparkles-outline',
-  Quotations: 'receipt-outline',
-  Tickets: 'camera-outline',
+  Tax: 'receipt-outline',
+  Settings: 'settings-outline',
 };
 
 function SageTabButton({ onPress, accessibilityState }: BottomTabBarButtonProps) {
@@ -63,6 +69,19 @@ function SageTabButton({ onPress, accessibilityState }: BottomTabBarButtonProps)
         <Ionicons name="sparkles" size={28} color="#ffffff" />
       </View>
     </Pressable>
+  );
+}
+
+function SettingsStack() {
+  return (
+    <SettingsStackNav.Navigator screenOptions={{ headerShown: false }}>
+      <SettingsStackNav.Screen name="SettingsHome" component={SettingsScreen} />
+      <SettingsStackNav.Screen name="SettingsProfile" component={SettingsProfileScreen} />
+      <SettingsStackNav.Screen name="SettingsTaxRegime" component={SettingsTaxScreen} />
+      <SettingsStackNav.Screen name="SettingsSatCredentials" component={SettingsSatScreen} />
+      <SettingsStackNav.Screen name="SettingsStorageScreen" component={SettingsStorage} />
+      <SettingsStackNav.Screen name="SettingsAppInfo" component={SettingsAppInfoScreen} />
+    </SettingsStackNav.Navigator>
   );
 }
 
@@ -94,8 +113,8 @@ function MainTabs() {
           tabBarButton: (props) => <SageTabButton {...props} />,
         }}
       />
-      <Tab.Screen name="Quotations" component={QuotationsScreen} />
-      <Tab.Screen name="Tickets" component={TicketsScreen} />
+      <Tab.Screen name="Tax" component={TaxScreen} />
+      <Tab.Screen name="Settings" component={SettingsStack} />
     </Tab.Navigator>
   );
 }

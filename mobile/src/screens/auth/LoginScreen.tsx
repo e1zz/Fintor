@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput,ScrollView, Image, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { Text, TextInput,ScrollView, Image, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
@@ -42,10 +42,10 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerClassName='flex-grow items-center justify-start p-6 pt-20' keyboardShouldPersistTaps='handled'>
           <Image source={require('../../../assets/favicon.png')} className='w-12 h-12 mb-6 mt-10' />
-          <Text className='text-4xl font-bold text-gray-900 mb-2'>Fintor</Text>
-          <Text className='text-lg text-gray-600 mb-2'>Sign in to your account</Text>
+          <Text className='text-4xl font-bold text-ink mb-2'>Fintor</Text>
+          <Text className='text-lg text-muted mb-2'>Sign in to your account</Text>
 
-          {error ? <Text className='text-red-500'>{error}</Text> : null}
+          {error ? <Text className='text-danger'>{error}</Text> : null}
 
           <TextInput
             className='mt-4 input-field'
@@ -68,7 +68,7 @@ export default function LoginScreen() {
           />
 
           <Pressable
-            className='mt-5 bg-primary py-4 px-12 rounded-full'
+            className='mt-5 btn-primary'
             onPress={handleLogin}
             disabled={loading}
           >
@@ -80,11 +80,11 @@ export default function LoginScreen() {
           </Pressable>
 
           <Pressable onPress={() => navigation.navigate('ResetPassword')}>
-            <Text className='mt-4 text-blue-500 underline'>Forgot password?</Text>
+            <Text className='mt-4 text-primary underline'>Forgot password?</Text>
           </Pressable>
 
           <Pressable onPress={() => navigation.navigate('Register')}>
-            <Text className='mt-4 text-blue-500 underline'>Don't have an account? Sign up</Text>
+            <Text className='mt-4 text-primary underline'>Don't have an account? Sign up</Text>
           </Pressable>
       </ScrollView>
 

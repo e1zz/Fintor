@@ -34,7 +34,12 @@
   }
 }
 
-@utility input-field {
-  @apply  rounded-md ring ring-gray-200 focus:ring-2 focus:ring-indigo-600 outline-none px-3 py-3 w-full
-  s
+@layer utilities {
+  .input-field {
+    @apply rounded-md ring ring-border focus:ring-2 focus:ring-primary outline-none px-3 py-3 w-full;
+  }
+
+  .btn-primary {
+    @apply mt-5 bg-primary py-4 px-12 rounded-full text-white font-semibold text-lg;
+  }
 }
