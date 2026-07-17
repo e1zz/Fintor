@@ -1,30 +1,133 @@
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import SatCredential, SatCfdi
+from .models import SatCredential, SatCfdi, SatDownloadRequest
 from .serializers import (
     SatCredentialSerializer,
+    SatCredentialUploadSerializer,
     SatCfdiSerializer,
     SatCfdiUpdateCategorySerializer,
+    SatDownloadCreateSerializer,
+    SatDownloadRequestSerializer,
 )
+from .tasks import sat_download_task
+
+
+def _rfc_from_cer(cer_bytes: bytes) -> str:
+    try:
+        cert = x509.load_der_x509_certificate(cer_bytes, default_backend())
+    except ValueError:
+        cert = x509.load_pem_x509_certificate(cer_bytes, default_backend())
+
+    for attr in cert.subject:
+        if attr.oid == x509.NameOID.SERIAL_NUMBER:
+            rfc = attr.value.strip().upper().replace(' ', '')
+            if 12 <= len(rfc) <= 13:
+                return rfc
+    raise ValueError('Could not extract RFC from certificate')
 
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
 def credential_list_create_view(request):
     if request.method == 'GET':
         credentials = SatCredential.objects.filter(tenant=request.user.tenant)
         serializer = SatCredentialSerializer(credentials, many=True)
         return Response(serializer.data)
 
-    serializer = SatCredentialSerializer(data=request.data)
+    serializer = SatCredentialUploadSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    credential = serializer.save(tenant=request.user.tenant)
-    credential.set_password(serializer.validated_data['password'])
+    cer = serializer.validated_data['cer']
+    key = serializer.validated_data['key']
+    password = serializer.validated_data['password']
+    tenant = request.user.tenant
+
+    cer_bytes = cer.read()
+    key_bytes = key.read()
+    try:
+        rfc = _rfc_from_cer(cer_bytes)
+    except ValueError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    if SatCredential.objects.filter(tenant=tenant, rfc=rfc).exists():
+        return Response(
+            {'error': f'Credential for {rfc} already exists'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    credential = SatCredential(
+        tenant=tenant,
+        rfc=rfc,
+        cer_data=cer_bytes,
+        key_data=key_bytes,
+        is_active=True,
+    )
+    credential.set_password(password)
     credential.save()
-    return Response(SatCredentialSerializer(credential).data)
+    return Response(
+        SatCredentialSerializer(credential).data,
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def credential_delete_view(request, id):
+    try:
+        credential = SatCredential.objects.get(id=id, tenant=request.user.tenant)
+    except SatCredential.DoesNotExist:
+        return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    credential.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def download_list_create_view(request):
+    tenant = request.user.tenant
+    if request.method == 'GET':
+        qs = SatDownloadRequest.objects.filter(tenant=tenant).order_by('-created_at')
+        return Response(SatDownloadRequestSerializer(qs, many=True).data)
+
+    serializer = SatDownloadCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+
+    try:
+        credential = SatCredential.objects.get(
+            id=data['credential_id'],
+            tenant=tenant,
+            is_active=True,
+        )
+    except SatCredential.DoesNotExist:
+        return Response({'error': 'Credential not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    req = SatDownloadRequest.objects.create(
+        tenant=tenant,
+        sat_credential=credential,
+        download_type=data['download_type'],
+        date_from=data['date_from'],
+        date_to=data['date_to'],
+        status=SatDownloadRequest.Status.PENDING,
+    )
+    # ponytail: run sync if celery/redis down so local smoke tests still work
+    try:
+        sat_download_task.delay(req.id)
+    except Exception:
+        sat_download_task(req.id)
+        req.refresh_from_db()
+
+    return Response(
+        SatDownloadRequestSerializer(req).data,
+        status=status.HTTP_201_CREATED,
+    )
 
 
 @api_view(['GET'])

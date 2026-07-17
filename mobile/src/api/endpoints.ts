@@ -71,15 +71,47 @@ export const getCfdis = async (): Promise<Cfdi[]> => {
 export type SatCredential = {
     id: number;
     rfc: string;
-    cer_path: string;
-    key_path: string;
     valid_until: string | null;
     is_active: boolean;
+};
+
+export type SatFilePick = {
+    uri: string;
+    name: string;
+    type?: string | null;
 };
 
 export const getSatCredentials = async (): Promise<SatCredential[]> => {
     const response = await AxiosInstance.get('sat/credentials/');
     return response.data;
+};
+
+export const uploadSatCredential = async (
+    cer: SatFilePick,
+    key: SatFilePick,
+    password: string,
+): Promise<SatCredential> => {
+    const form = new FormData();
+    form.append('cer', {
+        uri: cer.uri,
+        name: cer.name || 'certificate.cer',
+        type: cer.type || 'application/octet-stream',
+    } as any);
+    form.append('key', {
+        uri: key.uri,
+        name: key.name || 'private.key',
+        type: key.type || 'application/octet-stream',
+    } as any);
+    form.append('password', password);
+    const response = await AxiosInstance.post('sat/credentials/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        transformRequest: (data) => data,
+    });
+    return response.data;
+};
+
+export const deleteSatCredential = async (id: number): Promise<void> => {
+    await AxiosInstance.delete(`sat/credentials/${id}/`);
 };
 
 export type TaxRegimeCode = 'resico_pf' | 'pfae' | 'professional_fees' | 'resico_pm';

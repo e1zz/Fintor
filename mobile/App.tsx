@@ -114,7 +114,16 @@ function MainTabs() {
         }}
       />
       <Tab.Screen name="Tax" component={TaxScreen} />
-      <Tab.Screen name="Settings" component={SettingsStack} />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsStack}
+        listeners={({ navigation }) => ({
+          // Tax → SettingsTaxRegime leaves the nested stack stuck on Tax Regime
+          tabPress: () => {
+            navigation.navigate('Settings', { screen: 'SettingsHome' });
+          },
+        })}
+      />
     </Tab.Navigator>
   );
 }

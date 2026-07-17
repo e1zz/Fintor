@@ -4,6 +4,8 @@ from . import views
 
 urlpatterns = [
     path('credentials/', views.credential_list_create_view, name='sat-credentials'),
+    path('credentials/<int:id>/', views.credential_delete_view, name='sat-credential-delete'),
+    path('download/', views.download_list_create_view, name='sat-download'),
     path('cfdis/', views.cfdi_list_view, name='sat-cfdis'),
     path('cfdis/<int:id>/category/', views.cfdi_update_category_view, name='sat-cfdi-update-category'),
 ]

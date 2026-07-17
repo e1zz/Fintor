@@ -8,8 +8,8 @@ from apps.vendors.models import Vendor
 class SatCredential(TenantMixin):
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE)
     rfc = models.CharField(max_length=13)
-    cer_path = models.CharField(max_length=255)
-    key_path = models.CharField(max_length=255)
+    cer_data = models.BinaryField()
+    key_data = models.BinaryField()
     password_encrypted = models.TextField()
     valid_until = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)

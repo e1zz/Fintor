@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -17,6 +19,7 @@
     "axios": "^1.18.1",
     "expo": "~54.0.34",
     "expo-constants": "~18.0.13",
+    "expo-document-picker": "~14.0.8",
     "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
@@ -32,8 +35,12 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^14.0.1",
     "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "@vitejs/plugin-react": "^6.0.3",
+    "test-renderer": "^1.2.0",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.10"
   },
   "private": true
 }
