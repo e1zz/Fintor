@@ -114,6 +114,29 @@ export const deleteSatCredential = async (id: number): Promise<void> => {
     await AxiosInstance.delete(`sat/credentials/${id}/`);
 };
 
+export type SatDownloadType = 'issued' | 'received';
+
+export type SatDownloadRequest = {
+    id: number;
+    sat_credential: number;
+    download_type: SatDownloadType;
+    status: string;
+    date_from: string;
+    date_to: string;
+    cfdis_count: number;
+    error_message: string | null;
+};
+
+export const createSatDownload = async (data: {
+    credential_id: number;
+    download_type: SatDownloadType;
+    date_from: string;
+    date_to: string;
+}): Promise<SatDownloadRequest> => {
+    const response = await AxiosInstance.post('sat/download/', data);
+    return response.data;
+};
+
 export type TaxRegimeCode = 'resico_pf' | 'pfae' | 'professional_fees' | 'resico_pm';
 
 export const updateBusinessInfo = async (data: {

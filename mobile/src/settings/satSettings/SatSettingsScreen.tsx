@@ -15,13 +15,26 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import {
+  createSatDownload,
   deleteSatCredential,
   getSatCredentials,
   uploadSatCredential,
   type SatCredential,
+  type SatDownloadType,
   type SatFilePick,
 } from '../../api/endpoints';
 import { getApiError } from '../../api/client';
+
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function defaultRange() {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 30);
+  return { date_from: isoDate(from), date_to: isoDate(to) };
+}
 
 export default function SettingsSatScreen() {
   const insets = useSafeAreaInsets();
@@ -259,6 +272,27 @@ function CredentialCard({
   deleting: boolean;
   onDelete: () => void;
 }) {
+  const range = defaultRange();
+  const [showSync, setShowSync] = useState(false);
+  const [downloadType, setDownloadType] = useState<SatDownloadType>('received');
+  const [dateFrom, setDateFrom] = useState(range.date_from);
+  const [dateTo, setDateTo] = useState(range.date_to);
+  const [syncMsg, setSyncMsg] = useState('');
+
+  const syncMutation = useMutation({
+    mutationFn: () =>
+      createSatDownload({
+        credential_id: cred.id,
+        download_type: downloadType,
+        date_from: dateFrom,
+        date_to: dateTo,
+      }),
+    onSuccess: (r) => {
+      setSyncMsg(`Queued #${r.id} (${r.status}). CFDIs appear when job finishes.`);
+    },
+    onError: (e: any) => setSyncMsg(getApiError(e, 'Sync failed')),
+  });
+
   const validLabel = cred.valid_until
     ? new Date(cred.valid_until).toLocaleDateString()
     : '—';
@@ -284,20 +318,94 @@ function CredentialCard({
         </View>
       </View>
       <Text className="mt-2 text-xs text-muted">Valid until {validLabel}</Text>
-      <Pressable
-        onPress={onDelete}
-        disabled={deleting}
-        className="mt-3 flex-row items-center self-start"
-      >
-        {deleting ? (
-          <ActivityIndicator size="small" color="#d93025" />
-        ) : (
-          <>
-            <Ionicons name="trash-outline" size={16} color="#d93025" />
-            <Text className="ml-1 text-sm text-danger">Delete</Text>
-          </>
-        )}
-      </Pressable>
+
+      <View className="mt-3 flex-row items-center gap-4">
+        <Pressable
+          onPress={() => {
+            setShowSync((v) => !v);
+            setSyncMsg('');
+          }}
+          className="flex-row items-center"
+        >
+          <Ionicons name="cloud-download-outline" size={16} color="#1a73e8" />
+          <Text className="ml-1 text-sm text-primary">Sync CFDIs</Text>
+        </Pressable>
+        <Pressable
+          onPress={onDelete}
+          disabled={deleting}
+          className="flex-row items-center"
+        >
+          {deleting ? (
+            <ActivityIndicator size="small" color="#d93025" />
+          ) : (
+            <>
+              <Ionicons name="trash-outline" size={16} color="#d93025" />
+              <Text className="ml-1 text-sm text-danger">Delete</Text>
+            </>
+          )}
+        </Pressable>
+      </View>
+
+      {showSync ? (
+        <View className="mt-3 gap-2 border-t border-border pt-3">
+          <View className="flex-row gap-2">
+            {([
+              ['received', 'Recibidas'],
+              ['issued', 'Emitidas'],
+            ] as const).map(([value, label]) => (
+              <Pressable
+                key={value}
+                onPress={() => setDownloadType(value)}
+                className={`rounded-full px-3 py-1.5 ${
+                  downloadType === value ? 'bg-primary' : 'bg-bg border border-border'
+                }`}
+              >
+                <Text
+                  className={`text-xs font-medium ${
+                    downloadType === value ? 'text-white' : 'text-ink'
+                  }`}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <View className="flex-row gap-2">
+            <TextInput
+              className="h-10 flex-1 rounded-lg border border-border bg-bg px-3 text-sm text-ink"
+              value={dateFrom}
+              onChangeText={setDateFrom}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#9aa0a6"
+              autoCapitalize="none"
+            />
+            <TextInput
+              className="h-10 flex-1 rounded-lg border border-border bg-bg px-3 text-sm text-ink"
+              value={dateTo}
+              onChangeText={setDateTo}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#9aa0a6"
+              autoCapitalize="none"
+            />
+          </View>
+          {syncMsg ? (
+            <Text className="text-xs text-muted">{syncMsg}</Text>
+          ) : null}
+          <Pressable
+            onPress={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending || !dateFrom || !dateTo}
+            className={`h-10 items-center justify-center rounded-lg bg-primary ${
+              syncMutation.isPending ? 'opacity-50' : ''
+            }`}
+          >
+            {syncMutation.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-sm font-semibold text-white">Start download</Text>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }

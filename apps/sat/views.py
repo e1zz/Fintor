@@ -1,3 +1,5 @@
+import re
+
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from rest_framework import status
@@ -17,18 +19,25 @@ from .serializers import (
 )
 from .tasks import sat_download_task
 
+# moral 12 / física 13; SAT often stores "RFC / serial" in subject
+_RFC_RE = re.compile(r'^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$')
+
 
 def _rfc_from_cer(cer_bytes: bytes) -> str:
-    try:
-        cert = x509.load_der_x509_certificate(cer_bytes, default_backend())
-    except ValueError:
-        cert = x509.load_pem_x509_certificate(cer_bytes, default_backend())
+    cert = None
+    for loader in (x509.load_der_x509_certificate, x509.load_pem_x509_certificate):
+        try:
+            cert = loader(cer_bytes, default_backend())
+            break
+        except Exception:
+            continue
+    if cert is None:
+        raise ValueError('Invalid certificate file')
 
     for attr in cert.subject:
-        if attr.oid == x509.NameOID.SERIAL_NUMBER:
-            rfc = attr.value.strip().upper().replace(' ', '')
-            if 12 <= len(rfc) <= 13:
-                return rfc
+        for part in re.split(r'[\s/|]+', str(attr.value).upper()):
+            if _RFC_RE.match(part):
+                return part
     raise ValueError('Could not extract RFC from certificate')
 
 

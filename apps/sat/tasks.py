@@ -1,8 +1,8 @@
 from celery import shared_task
 
-from apps.sat.models import SatCredential, SatDownloadRequest
+from apps.sat.models import SatDownloadRequest
 from apps.sat.services.cfdi_parser import save_comprobantes
-from apps.sat.services.sat_go_client import SatGoClient, SatGoError
+from apps.sat.services.sat_scraper_client import SatScraperClient, SatScraperError
 
 
 def _tipo_for_download(download_type: str) -> str:
@@ -28,7 +28,7 @@ def sat_download_task(self, download_request_id: int):
     req.save(update_fields=['status', 'error_message', 'updated_at'])
 
     try:
-        client = SatGoClient()
+        client = SatScraperClient()
         result = client.consultar_facturas_fiel(
             credential,
             tipo=tipo,
@@ -36,11 +36,8 @@ def sat_download_task(self, download_request_id: int):
             date_to=req.date_to,
             descarga_comprobantes=True,
         )
-        if result.get('success') is False:
-            raise SatGoError(result.get('errorMessage') or 'SAT-Go returned success=false', body=result)
-
-        if result.get('requestId'):
-            req.request_id = str(result['requestId'])[:255]
+        if result.get('job_id'):
+            req.request_id = str(result['job_id'])[:255]
 
         count = save_comprobantes(
             result,
@@ -52,13 +49,14 @@ def sat_download_task(self, download_request_id: int):
         req.status = SatDownloadRequest.Status.FINISHED
         req.save(update_fields=['request_id', 'cfdis_count', 'status', 'updated_at'])
         return {'ok': True, 'cfdis_count': count, 'request_id': req.id}
-    except SatGoError as e:
+    except SatScraperError as e:
         req.status = SatDownloadRequest.Status.ERROR
-        req.error_message = str(e)[:2000]
-        if e.body and not req.error_message:
-            req.error_message = str(e.body)[:2000]
+        msg = str(e)
+        if e.body and str(e.body) not in msg:
+            msg = f'{msg} | {e.body}'
+        req.error_message = msg[:2000]
         req.save(update_fields=['status', 'error_message', 'updated_at'])
-        return {'error': str(e)}
+        return {'error': msg}
     except Exception as e:
         req.status = SatDownloadRequest.Status.ERROR
         req.error_message = str(e)[:2000]
