@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24.96" height="24.96" viewBox="0 0 24.96 24.96" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="chart-no-axes-combined" clip-path="url(#clip0_0_25)">
+<path id="Vector" d="M12.48 16.64V21.84M16.6403 14.56V21.84M20.8007 10.4V21.84M22.8808 3.12L13.8883 12.1118C13.84 12.1603 13.7826 12.1987 13.7194 12.2249C13.6562 12.2511 13.5885 12.2646 13.5201 12.2646C13.4517 12.2646 13.3839 12.2511 13.3208 12.2249C13.2576 12.1987 13.2002 12.1603 13.1519 12.1118L9.72794 8.68816C9.63042 8.59067 9.49817 8.53591 9.36027 8.53591C9.22237 8.53591 9.09012 8.59067 8.9926 8.68816L2.07917 15.6M4.15933 18.72V21.84M8.31967 14.56V21.84" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+</g>
+<defs>
+<clipPath id="clip0_0_25">
+<rect width="24.96" height="24.96" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -1,48 +1,18 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  ActivityIndicator,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
 import { updateBusinessInfo, type TaxRegimeCode } from '../../api/endpoints';
 import { getApiError } from '../../api/client';
-
-const REGIMES: {
-  code: TaxRegimeCode;
-  label: string;
-  description: string;
-}[] = [
-  {
-    code: 'resico_pf',
-    label: 'RESICO Individual',
-    description: '~1–2.5% on gross income',
-  },
-  {
-    code: 'pfae',
-    label: 'Individual Business Activity',
-    description: 'Progressive rate on profit',
-  },
-  {
-    code: 'professional_fees',
-    label: 'Professional Fees',
-    description: 'Progressive rate on profit',
-  },
-  {
-    code: 'resico_pm',
-    label: 'RESICO Corporate',
-    description: '~30% on profit',
-  },
-];
+import { TAX_REGIMES } from '../../constants/taxRegimes';
+import TopAppBar from '../../components/TopAppBar';
+import Button from '../../components/Button';
+import Toast from '../../components/Toast';
+import CircleCheckIcon from '../../../assets/icons/circle-check-primary.svg';
+import CircleUnselectedIcon from '../../../assets/icons/circle-unselected.svg';
 
 export default function TaxRegimeScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<any>();
   const user = useAuthStore((s) => s.user);
   const loadUser = useAuthStore((s) => s.loadUser);
 
@@ -72,25 +42,18 @@ export default function TaxRegimeScreen() {
 
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center px-4 py-2">
-        <Pressable hitSlop={8} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back-outline" size={24} color="#5f6368" />
-        </Pressable>
-        <Text className="ml-3 text-lg font-semibold text-ink">Tax Regime</Text>
-      </View>
+      <TopAppBar title="Tax Regime" />
 
-      <ScrollView contentContainerClassName="gap-4 p-4">
-        <Text className="text-sm text-muted">
-          Select your tax regime to calculate estimated ISR
+      <ScrollView
+        contentContainerClassName="gap-3 px-4 pt-3"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+      >
+        <Text className="font-sans text-sm text-muted">
+          Choose the regime registered with SAT for your business.
         </Text>
 
-        {error ? <Text className="text-center text-danger">{error}</Text> : null}
-        {saved ? (
-          <Text className="text-center text-success">Tax regime saved</Text>
-        ) : null}
-
-        <View className="overflow-hidden rounded-lg border border-border bg-card">
-          {REGIMES.map((regime, i) => {
+        <View className="gap-3">
+          {TAX_REGIMES.map((regime) => {
             const active = selected === regime.code;
             return (
               <Pressable
@@ -99,37 +62,38 @@ export default function TaxRegimeScreen() {
                   setSelected(regime.code);
                   setSaved(false);
                 }}
-                className={`flex-row items-center px-4 py-3.5 ${
-                  i < REGIMES.length - 1 ? 'border-b border-border' : ''
+                accessibilityRole="radio"
+                accessibilityState={{ checked: active }}
+                // 2pt selected border keeps the 16pt content inset: 14 + 2
+                className={`flex-row items-center gap-3 rounded-lg bg-card ${
+                  active ? 'border-2 border-primary p-[14px]' : 'border border-border p-[15px]'
                 }`}
               >
-                <Ionicons
-                  name={active ? 'radio-button-on' : 'radio-button-off-outline'}
-                  size={22}
-                  color={active ? '#1a73e8' : '#9aa0a6'}
-                />
-                <View className="ml-3 flex-1">
-                  <Text className="text-sm font-medium text-ink">{regime.label}</Text>
-                  <Text className="mt-0.5 text-xs text-muted">{regime.description}</Text>
+                <View className="flex-1 gap-[5px]">
+                  <Text className={`font-sans-semibold text-sm ${active ? 'text-primary' : 'text-ink'}`}>
+                    {regime.label}
+                  </Text>
+                  <Text className="font-sans text-xs text-muted">{regime.description}</Text>
                 </View>
+                {active ? <CircleCheckIcon /> : <CircleUnselectedIcon />}
               </Pressable>
             );
           })}
         </View>
 
-        <Pressable
+        <Text className="font-sans text-xs text-muted">
+          Used for illustrative ISR estimates. This does not change your registration with SAT.
+        </Text>
+
+        <Button
+          title="Save"
           onPress={handleSave}
-          disabled={!dirty || loading || !selected}
-          className={`mt-2 h-12 w-full items-center justify-center rounded-lg bg-primary ${
-            !dirty || loading || !selected ? 'opacity-50' : ''
-          }`}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-base font-semibold text-white">Save</Text>
-          )}
-        </Pressable>
+          loading={loading}
+          disabled={!dirty || !selected}
+        />
+
+        {error ? <Text className="font-sans text-sm text-danger">{error}</Text> : null}
+        {saved ? <Toast message="Tax regime saved" /> : null}
       </ScrollView>
     </View>
   );

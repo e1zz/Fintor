@@ -1,18 +1,21 @@
 import "./global.css";
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import {
-  createBottomTabNavigator,
-  type BottomTabBarButtonProps,
-} from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+// Per-weight imports so only the weights in use are bundled
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { useAuthStore } from './src/stores/authStore';
-import type { AuthStackParamList, MainTabParamList, SettingsStackParamList } from './src/types/navigation';
+import type { AuthStackParamList, MainTabParamList, AppStackParamList } from './src/types/navigation';
+import BottomTabBar from './src/components/BottomTabBar';
 
 import SageAIScreen from './src/screens/SageAI/SageAIScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
@@ -25,11 +28,12 @@ import SettingsScreen from './src/settings/SettingsScreen';
 import SettingsProfileScreen from './src/settings/profile/profileScreen';
 import TaxRegimeScreen from './src/settings/taxRegime/TaxRegimeScreen';
 import SettingsSatScreen from './src/settings/satSettings/SatSettingsScreen';
+import SatSyncScreen from './src/settings/satSync/SatSyncScreen';
 import SettingsStorage from './src/settings/storage/StorageScreen';
 import SettingsAppInfoScreen from './src/settings/appInfo/AppInfoScreen';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
-const SettingsStackNav = createNativeStackNavigator<SettingsStackParamList>();
+const AppStackNav = createNativeStackNavigator<AppStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const queryClient = new QueryClient();
 
@@ -43,88 +47,33 @@ function AuthStack() {
   );
 }
 
-const TAB_ICONS: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
-  Dashboard: 'home-outline',
-  CFDIs: 'document-text-outline',
-  Sage: 'sparkles-outline',
-  Tax: 'receipt-outline',
-  Settings: 'settings-outline',
-};
-
-function SageTabButton({ onPress, accessibilityState }: BottomTabBarButtonProps) {
-  const focused = accessibilityState?.selected;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={accessibilityState}
-      className="-mt-5 items-center justify-center"
-    >
-      <View
-        className={`h-16 w-16 items-center justify-center rounded-full shadow-lg ${
-          focused ? 'bg-primary' : 'bg-primary/90'
-        }`}
-      >
-        <Ionicons name="sparkles" size={28} color="#ffffff" />
-      </View>
-    </Pressable>
-  );
-}
-
-function SettingsStack() {
-  return (
-    <SettingsStackNav.Navigator screenOptions={{ headerShown: false }}>
-      <SettingsStackNav.Screen name="SettingsHome" component={SettingsScreen} />
-      <SettingsStackNav.Screen name="SettingsProfile" component={SettingsProfileScreen} />
-      <SettingsStackNav.Screen name="SettingsTaxRegime" component={TaxRegimeScreen} />
-      <SettingsStackNav.Screen name="SettingsSatCredentials" component={SettingsSatScreen} />
-      <SettingsStackNav.Screen name="SettingsStorageScreen" component={SettingsStorage} />
-      <SettingsStackNav.Screen name="SettingsAppInfo" component={SettingsAppInfoScreen} />
-    </SettingsStackNav.Navigator>
-  );
-}
-
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: '#1a73e8',
-        tabBarInactiveTintColor: '#5f6368',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopColor: '#e8eaed',
-          height: 72,
-          paddingTop: 1,
-        },
-        tabBarIcon: ({ color, size }) => (
-          <Ionicons name={TAB_ICONS[route.name]} size={size} color={color} />
-        ),
-      })}
+      tabBar={(props) => <BottomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="CFDIs" component={CfdisScreen} />
-      <Tab.Screen
-        name="Sage"
-        component={SageAIScreen}
-        options={{
-          tabBarLabel: () => null,
-          tabBarButton: (props) => <SageTabButton {...props} />,
-        }}
-      />
+      <Tab.Screen name="Sage" component={SageAIScreen} />
       <Tab.Screen name="Tax" component={TaxScreen} />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsStack}
-        listeners={({ navigation }) => ({
-          // Tax → SettingsTaxRegime leaves the nested stack stuck on Tax Regime
-          tabPress: () => {
-            navigation.navigate('Settings', { screen: 'SettingsHome' });
-          },
-        })}
-      />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
+  );
+}
+
+// Settings detail screens sit above the tabs so they cover the tab bar
+function AppStack() {
+  return (
+    <AppStackNav.Navigator screenOptions={{ headerShown: false }}>
+      <AppStackNav.Screen name="MainTabs" component={MainTabs} />
+      <AppStackNav.Screen name="SettingsProfile" component={SettingsProfileScreen} />
+      <AppStackNav.Screen name="SettingsTaxRegime" component={TaxRegimeScreen} />
+      <AppStackNav.Screen name="SettingsSatCredentials" component={SettingsSatScreen} />
+      <AppStackNav.Screen name="SettingsSatSync" component={SatSyncScreen} />
+      <AppStackNav.Screen name="SettingsStorageScreen" component={SettingsStorage} />
+      <AppStackNav.Screen name="SettingsAppInfo" component={SettingsAppInfoScreen} />
+    </AppStackNav.Navigator>
   );
 }
 
@@ -132,15 +81,22 @@ export default function App() {
   const isLoading = useAuthStore(s => s.isLoading);
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   const loadUser = useAuthStore(s => s.loadUser);
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
 
   useEffect(() => {
     loadUser();
   }, []);
 
-  if (isLoading) {
+  // A font load failure falls back to the system font rather than blocking the app
+  if (isLoading || (!fontsLoaded && !fontError)) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
-        <ActivityIndicator size="large" color="#1a73e8" />
+        <ActivityIndicator size="large" colorClassName="accent-primary" />
       </View>
     );
   }
@@ -149,7 +105,7 @@ export default function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <NavigationContainer>
-          {isAuthenticated ? <MainTabs /> : <AuthStack />}
+          {isAuthenticated ? <AppStack /> : <AuthStack />}
         </NavigationContainer>
         <StatusBar style="auto" />
       </QueryClientProvider>

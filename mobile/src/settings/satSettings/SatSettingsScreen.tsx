@@ -6,39 +6,41 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
-  TextInput,
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
-import { Ionicons } from '@expo/vector-icons';
 import {
   createSatDownload,
   deleteSatCredential,
   getSatCredentials,
   uploadSatCredential,
   type SatCredential,
-  type SatDownloadType,
   type SatFilePick,
 } from '../../api/endpoints';
 import { getApiError } from '../../api/client';
+import type { AppStackParamList } from '../../types/navigation';
+import { formatIsoDate } from '../../utils/format';
+import TopAppBar from '../../components/TopAppBar';
+import Button from '../../components/Button';
+import TextField from '../../components/TextField';
+import EmptyState from '../../components/EmptyState';
+import SavedCredentialCard from './SavedCredentialCard';
+import LockKeyholeIcon from '../../../assets/icons/lock-keyhole-15.svg';
+import UploadIcon from '../../../assets/icons/upload.svg';
 
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
-function defaultRange() {
-  const to = new Date();
+function defaultFromDate() {
   const from = new Date();
   from.setDate(from.getDate() - 30);
-  return { date_from: isoDate(from), date_to: isoDate(to) };
+  return formatIsoDate(from);
 }
 
 export default function SettingsSatScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['sat-credentials'],
@@ -49,20 +51,35 @@ export default function SettingsSatScreen() {
   const [cer, setCer] = useState<SatFilePick | null>(null);
   const [key, setKey] = useState<SatFilePick | null>(null);
   const [password, setPassword] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
   const [formError, setFormError] = useState('');
 
+  const closeForm = () => {
+    setShowForm(false);
+    setCer(null);
+    setKey(null);
+    setPassword('');
+    setDateFrom('');
+    setFormError('');
+  };
+
+  // Upload the CSD, then queue issued + received downloads from the chosen date
   const uploadMutation = useMutation({
-    mutationFn: () => {
-      if (!cer || !key || !password) throw new Error('Missing files or password');
-      return uploadSatCredential(cer, key, password);
+    mutationFn: async () => {
+      if (!cer || !key || !password || !dateFrom) throw new Error('Missing files, password or date');
+      const cred = await uploadSatCredential(cer, key, password);
+      const dateTo = formatIsoDate(new Date());
+      await Promise.all(
+        (['issued', 'received'] as const).map((download_type) =>
+          createSatDownload({ credential_id: cred.id, download_type, date_from: dateFrom, date_to: dateTo }),
+        ),
+      );
+      return cred;
     },
     onSuccess: async () => {
-      setCer(null);
-      setKey(null);
-      setPassword('');
-      setFormError('');
-      setShowForm(false);
+      closeForm();
       await queryClient.invalidateQueries({ queryKey: ['sat-credentials'] });
+      await queryClient.invalidateQueries({ queryKey: ['sat-downloads'] });
     },
     onError: (e: any) => setFormError(getApiError(e, 'Upload failed')),
   });
@@ -112,300 +129,136 @@ export default function SettingsSatScreen() {
     );
   };
 
+  const openForm = () => {
+    setShowForm(true);
+    if (!dateFrom) setDateFrom(defaultFromDate());
+  };
+
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center px-4 py-2">
-        <Pressable hitSlop={8} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back-outline" size={24} color="#5f6368" />
-        </Pressable>
-        <Text className="ml-3 text-lg font-semibold text-ink">SAT Credentials</Text>
-      </View>
+      <TopAppBar title="SAT Credentials" />
 
       {isLoading && !data ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" colorClassName="accent-primary" />
+          <ActivityIndicator colorClassName="accent-primary" />
         </View>
       ) : isError ? (
         <View className="flex-1 items-center justify-center p-6">
-          <Text className="text-center text-danger">
+          <Text className="text-center font-sans text-sm text-danger">
             {error?.message || 'Failed to load credentials'}
           </Text>
         </View>
       ) : (
         <ScrollView
-          contentContainerClassName="gap-4 p-4"
+          contentContainerClassName="gap-3 px-4 pt-3"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
           keyboardShouldPersistTaps="handled"
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColorClassName="accent-primary"
+              colorsClassName="accent-primary"
+            />
           }
         >
-          <Text className="text-sm text-muted">
-            CSD certificates used to download CFDIs and stamp invoices. Keep .key
-            private — never share it.
-          </Text>
-
-          {data?.length ? (
-            data.map((cred) => (
-              <CredentialCard
-                key={cred.id}
-                cred={cred}
-                deleting={deleteMutation.isPending && deleteMutation.variables === cred.id}
-                onDelete={() => confirmDelete(cred)}
-              />
-            ))
-          ) : (
-            <View className="rounded-lg border border-border bg-card p-6">
-              <Text className="text-center text-sm text-muted">
-                No SAT credentials yet
-              </Text>
-            </View>
-          )}
+          <View className="flex-row items-center gap-3">
+            <Pressable className="flex-1" onPress={openForm}>
+              <Text className="font-sans-semibold text-sm text-primary">+ Add credential</Text>
+            </Pressable>
+            <Button title="Add CSD" onPress={openForm} />
+          </View>
 
           {showForm ? (
-            <View className="gap-3 rounded-lg border border-border bg-card p-4">
-              <Text className="font-medium text-ink">Add CSD</Text>
-              <Text className="text-xs text-muted">
-                RFC is read from the .cer. Password never leaves the server encrypted.
-              </Text>
+            <View className="card gap-3">
+              <Text className="font-sans-semibold text-base text-ink">Download from SAT</Text>
+              <View className="flex-row items-center gap-[7px]">
+                <LockKeyholeIcon />
+                <Text className="font-sans text-xs text-muted">Your private key stays protected.</Text>
+              </View>
 
-              <FileRow
-                label=".cer certificate"
-                file={cer}
-                onPick={() => pickFile('cer')}
-              />
-              <FileRow
-                label=".key private key"
-                file={key}
-                onPick={() => pickFile('key')}
-              />
+              <View className="flex-row gap-3">
+                <UploadControl label="Certificate (.cer)" cta="Choose .cer" file={cer} onPick={() => pickFile('cer')} />
+                <UploadControl label="Private key (.key)" cta="Choose .key" file={key} onPick={() => pickFile('key')} />
+              </View>
 
-              <TextInput
-                className="h-12 rounded-lg border border-border bg-bg px-3 text-ink"
-                placeholder="Key password"
-                placeholderTextColor="#9aa0a6"
+              <TextField
+                size="compact"
+                label="Key password"
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+              <TextField
+                size="compact"
+                label="Download from date"
+                placeholder="YYYY-MM-DD"
+                value={dateFrom}
+                onChangeText={setDateFrom}
+                autoCapitalize="none"
+              />
 
-              {formError ? (
-                <Text className="text-center text-sm text-danger">{formError}</Text>
-              ) : null}
+              {formError ? <Text className="font-sans text-sm text-danger">{formError}</Text> : null}
 
-              <Pressable
-                onPress={() => uploadMutation.mutate()}
-                disabled={!cer || !key || !password || uploadMutation.isPending}
-                className={`h-12 items-center justify-center rounded-lg bg-primary ${
-                  !cer || !key || !password || uploadMutation.isPending
-                    ? 'opacity-50'
-                    : ''
-                }`}
-              >
-                {uploadMutation.isPending ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text className="text-base font-semibold text-white">Upload</Text>
-                )}
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  setShowForm(false);
-                  setFormError('');
-                }}
-                className="h-10 items-center justify-center"
-              >
-                <Text className="text-sm text-muted">Cancel</Text>
-              </Pressable>
+              <View className="flex-row gap-2.5">
+                <Button title="Cancel" variant="outline" onPress={closeForm} />
+                <Button
+                  title="Start download"
+                  className="flex-1"
+                  onPress={() => uploadMutation.mutate()}
+                  loading={uploadMutation.isPending}
+                  disabled={!cer || !key || !password || !dateFrom}
+                />
+              </View>
             </View>
-          ) : (
-            <Pressable
-              onPress={() => setShowForm(true)}
-              className="h-12 w-full items-center justify-center rounded-lg border border-border bg-card"
-            >
-              <Text className="text-sm font-medium text-primary">+ Add credential</Text>
-            </Pressable>
-          )}
+          ) : null}
+
+          {data?.length ? (
+            data.map((cred) => (
+              <SavedCredentialCard
+                key={cred.id}
+                cred={cred}
+                deleting={deleteMutation.isPending && deleteMutation.variables === cred.id}
+                onDelete={() => confirmDelete(cred)}
+                onPress={() => navigation.navigate('SettingsSatSync', { credentialId: cred.id })}
+              />
+            ))
+          ) : !showForm ? (
+            <EmptyState title="No SAT credentials yet" description="Add your CSD to download CFDIs from SAT." />
+          ) : null}
         </ScrollView>
       )}
     </View>
   );
 }
 
-function FileRow({
+function UploadControl({
   label,
+  cta,
   file,
   onPick,
 }: {
   label: string;
+  cta: string;
   file: SatFilePick | null;
   onPick: () => void;
 }) {
   return (
-    <Pressable
-      onPress={onPick}
-      className="flex-row items-center rounded-lg border border-border bg-bg px-3 py-3"
-    >
-      <Ionicons
-        name={file ? 'document-attach' : 'document-outline'}
-        size={20}
-        color={file ? '#1a73e8' : '#9aa0a6'}
-      />
-      <View className="ml-3 flex-1">
-        <Text className="text-xs text-muted">{label}</Text>
-        <Text className="text-sm text-ink" numberOfLines={1}>
-          {file?.name || 'Tap to pick file'}
+    <View className="flex-1 gap-[7px]">
+      <Text className="font-sans text-xs text-muted">{label}</Text>
+      <Pressable
+        onPress={onPick}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${file?.name ?? cta}`}
+        className="h-11.5 flex-row items-center justify-center gap-2 rounded-md border border-border bg-card px-3 active:bg-primary-tint"
+      >
+        <UploadIcon />
+        <Text className="shrink font-sans text-[13px] leading-[1.4] text-primary" numberOfLines={1}>
+          {file?.name ?? cta}
         </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function CredentialCard({
-  cred,
-  deleting,
-  onDelete,
-}: {
-  cred: SatCredential;
-  deleting: boolean;
-  onDelete: () => void;
-}) {
-  const range = defaultRange();
-  const [showSync, setShowSync] = useState(false);
-  const [downloadType, setDownloadType] = useState<SatDownloadType>('received');
-  const [dateFrom, setDateFrom] = useState(range.date_from);
-  const [dateTo, setDateTo] = useState(range.date_to);
-  const [syncMsg, setSyncMsg] = useState('');
-
-  const syncMutation = useMutation({
-    mutationFn: () =>
-      createSatDownload({
-        credential_id: cred.id,
-        download_type: downloadType,
-        date_from: dateFrom,
-        date_to: dateTo,
-      }),
-    onSuccess: (r) => {
-      setSyncMsg(`Queued #${r.id} (${r.status}). CFDIs appear when job finishes.`);
-    },
-    onError: (e: any) => setSyncMsg(getApiError(e, 'Sync failed')),
-  });
-
-  const validLabel = cred.valid_until
-    ? new Date(cred.valid_until).toLocaleDateString()
-    : '—';
-  const expired =
-    cred.valid_until != null && new Date(cred.valid_until) < new Date();
-
-  return (
-    <View className="rounded-lg border border-border bg-card p-4">
-      <View className="flex-row items-center justify-between">
-        <Text className="font-medium text-ink">{cred.rfc}</Text>
-        <View
-          className={`rounded-full px-2 py-0.5 ${
-            cred.is_active && !expired ? 'bg-success/15' : 'bg-danger/15'
-          }`}
-        >
-          <Text
-            className={`text-xs font-medium ${
-              cred.is_active && !expired ? 'text-success' : 'text-danger'
-            }`}
-          >
-            {expired ? 'Expired' : cred.is_active ? 'Active' : 'Inactive'}
-          </Text>
-        </View>
-      </View>
-      <Text className="mt-2 text-xs text-muted">Valid until {validLabel}</Text>
-
-      <View className="mt-3 flex-row items-center gap-4">
-        <Pressable
-          onPress={() => {
-            setShowSync((v) => !v);
-            setSyncMsg('');
-          }}
-          className="flex-row items-center"
-        >
-          <Ionicons name="cloud-download-outline" size={16} color="#1a73e8" />
-          <Text className="ml-1 text-sm text-primary">Sync CFDIs</Text>
-        </Pressable>
-        <Pressable
-          onPress={onDelete}
-          disabled={deleting}
-          className="flex-row items-center"
-        >
-          {deleting ? (
-            <ActivityIndicator size="small" color="#d93025" />
-          ) : (
-            <>
-              <Ionicons name="trash-outline" size={16} color="#d93025" />
-              <Text className="ml-1 text-sm text-danger">Delete</Text>
-            </>
-          )}
-        </Pressable>
-      </View>
-
-      {showSync ? (
-        <View className="mt-3 gap-2 border-t border-border pt-3">
-          <View className="flex-row gap-2">
-            {([
-              ['received', 'Recibidas'],
-              ['issued', 'Emitidas'],
-            ] as const).map(([value, label]) => (
-              <Pressable
-                key={value}
-                onPress={() => setDownloadType(value)}
-                className={`rounded-full px-3 py-1.5 ${
-                  downloadType === value ? 'bg-primary' : 'bg-bg border border-border'
-                }`}
-              >
-                <Text
-                  className={`text-xs font-medium ${
-                    downloadType === value ? 'text-white' : 'text-ink'
-                  }`}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <View className="flex-row gap-2">
-            <TextInput
-              className="h-10 flex-1 rounded-lg border border-border bg-bg px-3 text-sm text-ink"
-              value={dateFrom}
-              onChangeText={setDateFrom}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9aa0a6"
-              autoCapitalize="none"
-            />
-            <TextInput
-              className="h-10 flex-1 rounded-lg border border-border bg-bg px-3 text-sm text-ink"
-              value={dateTo}
-              onChangeText={setDateTo}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9aa0a6"
-              autoCapitalize="none"
-            />
-          </View>
-          {syncMsg ? (
-            <Text className="text-xs text-muted">{syncMsg}</Text>
-          ) : null}
-          <Pressable
-            onPress={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending || !dateFrom || !dateTo}
-            className={`h-10 items-center justify-center rounded-lg bg-primary ${
-              syncMutation.isPending ? 'opacity-50' : ''
-            }`}
-          >
-            {syncMutation.isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-sm font-semibold text-white">Start download</Text>
-            )}
-          </Pressable>
-        </View>
-      ) : null}
+      </Pressable>
     </View>
   );
 }

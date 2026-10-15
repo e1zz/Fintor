@@ -2,26 +2,25 @@ import React from 'react';
 import {
   View,
   Text,
+  Image,
   ActivityIndicator,
   ScrollView,
   RefreshControl,
-  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCSSVariable } from 'uniwind';
 import { useDashboardSummary, useDashboardChart, useRecentInvoices } from '../../hooks/useDashboards';
-import { BarChart } from 'react-native-chart-kit';
+import type { RecentInvoice } from '../../api/endpoints';
+import { formatCompactMoney, formatMoney, formatUuid } from '../../utils/format';
+import PageHeader from '../../components/PageHeader';
+import StatCard from '../../components/StatCard';
+import EmptyState from '../../components/EmptyState';
+import Divider from '../../components/Divider';
 
-interface Invoice {
-  id: string;
-  number: string;
-  total: number;
-}
+const dashedGrid = require('../../../assets/images/dashed-grid.png');
 
-interface SummaryCardProps {
-  title: string;
-  value: number;
-  accent: 'success' | 'danger' | 'primary';
+interface ChartData {
+  labels: string[];
+  datasets: { data: number[] }[];
 }
 
 export default function DashboardScreen(): React.ReactElement {
@@ -29,12 +28,6 @@ export default function DashboardScreen(): React.ReactElement {
   const summaryQuery = useDashboardSummary();
   const chartQuery = useDashboardChart('monthly');
   const recentInvoicesQuery = useRecentInvoices(5);
-  const { width: screenWidth } = useWindowDimensions();
-  // scroll p-4 (32) + card p-4 (32); refined by onLayout
-  const [chartWidth, setChartWidth] = React.useState(Math.max(screenWidth - 64, 200));
-  const primary = useCSSVariable('--color-primary') as string;
-  const card = useCSSVariable('--color-card') as string;
-  const muted = useCSSVariable('--color-muted') as string;
   const [refreshing, setRefreshing] = React.useState(false);
 
   const handleRefresh = async () => {
@@ -47,143 +40,138 @@ export default function DashboardScreen(): React.ReactElement {
     setRefreshing(false);
   };
 
-  if (summaryQuery.isLoading) {
-    return (
-      <View
-        className="flex-1 items-center justify-center bg-bg p-6"
-        style={{ paddingTop: insets.top }}
-      >
-        <ActivityIndicator size="large" colorClassName="accent-primary" />
-      </View>
-    );
-  }
-
-  if (summaryQuery.isError) {
-    return (
-      <View
-        className="flex-1 items-center justify-center bg-bg p-6"
-        style={{ paddingTop: insets.top }}
-      >
-        <Text className="text-center text-danger">
-          Error loading dashboard summary: {summaryQuery.error.message}
-        </Text>
-      </View>
-    );
-  }
+  const chart: ChartData | undefined = chartQuery.data;
+  const chartValues = chart?.datasets?.[0]?.data ?? [];
+  const hasChartData = !!chart?.labels?.length && chartValues.some((v) => v > 0);
+  const invoices: RecentInvoice[] = recentInvoicesQuery.data ?? [];
 
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="gap-4 p-4"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-      >
-        <View>
-          <Text className="text-2xl font-bold text-ink">Dashboard</Text>
-          <Text className="mt-1 text-sm text-muted">
-            Overview of your business performance
+      <PageHeader title="Dashboard" subtitle="Overview of your business performance" />
+
+      {summaryQuery.isLoading ? (
+        <View className="flex-1 items-center justify-center gap-3 px-4 pb-7">
+          <ActivityIndicator colorClassName="accent-primary" />
+          <Text className="font-sans text-xs text-muted">Loading your overview…</Text>
+        </View>
+      ) : summaryQuery.isError ? (
+        <View className="flex-1 items-center justify-center px-4 pb-7">
+          <Text className="text-center font-sans text-sm text-danger">
+            Error loading dashboard summary: {summaryQuery.error.message}
           </Text>
         </View>
+      ) : (
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="gap-3 px-4 pb-7"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColorClassName="accent-primary"
+              colorsClassName="accent-primary"
+            />
+          }
+        >
+          <View className="flex-row gap-2">
+            <StatCard title="Sales" value={formatMoney(summaryQuery.data?.sales)} tone="income" />
+            <StatCard title="Expenses" value={formatMoney(summaryQuery.data?.expenses)} tone="expense" />
+            <StatCard title="Profit" value={formatMoney(summaryQuery.data?.profit)} tone="profit" />
+          </View>
 
-        <View className="flex-row gap-2">
-          <SummaryCard title="Sales" value={summaryQuery.data?.sales ?? 0} accent="success" />
-          <SummaryCard title="Expenses" value={summaryQuery.data?.expenses ?? 0} accent="danger" />
-          <SummaryCard title="Profit" value={summaryQuery.data?.profit ?? 0} accent="primary" />
-        </View>
-
-        <View className="overflow-hidden rounded-lg border border-border bg-card p-4">
-          <Text className="mb-3 font-semibold text-ink">Overview</Text>
-          {chartQuery.data?.labels?.length ? (
-            <View
-              className="overflow-hidden"
-              onLayout={(e) => {
-                const w = Math.floor(e.nativeEvent.layout.width);
-                if (w > 0 && w !== chartWidth) setChartWidth(w);
-              }}
-            >
-              <BarChart
-                data={chartQuery.data}
-                width={chartWidth}
-                height={200}
-                yAxisLabel=""
-                yAxisSuffix=""
-                fromZero
-                withInnerLines
-                showValuesOnTopOfBars={false}
-                chartConfig={{
-                  backgroundGradientFrom: card,
-                  backgroundGradientTo: card,
-                  backgroundGradientFromOpacity: 0,
-                  backgroundGradientToOpacity: 0,
-                  fillShadowGradientFrom: primary,
-                  fillShadowGradientTo: primary,
-                  color: () => primary,
-                  labelColor: () => muted,
-                  barPercentage: 0.45,
-                  decimalPlaces: 0,
-                  propsForBackgroundLines: {
-                    strokeDasharray: '',
-                    stroke: muted,
-                    strokeOpacity: 0.15,
-                  },
-                  formatYLabel: (v) => {
-                    const n = Number(v);
-                    if (n >= 1000) return `$${(n / 1000).toFixed(0)}k`;
-                    return `$${n}`;
-                  },
-                }}
-                style={{
-                  marginLeft: -8,
-                  borderRadius: 8,
-                }}
-              />
+          <View className="card gap-2">
+            <Text className="font-sans-semibold text-base text-ink">Overview</Text>
+            <View className="flex-row justify-between">
+              <Text className="font-sans text-xs text-muted">Sales · MXN</Text>
+              {chart?.labels?.length ? (
+                <Text className="font-sans text-xs text-muted">
+                  {chart.labels[0]} – {chart.labels[chart.labels.length - 1]} {new Date().getFullYear()}
+                </Text>
+              ) : null}
             </View>
-          ) : (
-            <Text className="py-2 text-center text-sm text-muted">No chart data yet</Text>
-          )}
-        </View>
+            {hasChartData && chart ? (
+              <SalesChart labels={chart.labels} values={chartValues} />
+            ) : (
+              <EmptyState title="No chart data yet" description="Your sales trend will appear here." />
+            )}
+          </View>
 
-        <View className="rounded-lg border border-border bg-card p-4">
-          <Text className="mb-3 font-semibold text-ink">Recent invoices</Text>
-          {recentInvoicesQuery.data?.length ? (
-            recentInvoicesQuery.data.map((inv: Invoice) => (
-              <View
-                key={inv.id}
-                className="flex-row items-center justify-between border-b border-border py-3"
-              >
-                <Text className="flex-1 text-ink" numberOfLines={1}>
-                  {inv.number || '—'}
-                </Text>
-                <Text className="ml-3 font-medium text-ink">
-                  ${Number(inv.total).toFixed(2)}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text className="py-2 text-center text-sm text-muted">No invoices yet</Text>
-          )}
-        </View>
-      </ScrollView>
+          <View className="card">
+            <Text className="font-sans-semibold text-base text-ink">Recent invoices</Text>
+            {invoices.length ? (
+              invoices.map((inv, i) => (
+                <View key={inv.id}>
+                  {i > 0 ? <Divider /> : null}
+                  <View className="h-9.5 flex-row items-center justify-between gap-3">
+                    <View className="shrink gap-px">
+                      <Text className="font-sans-medium text-xs text-ink" numberOfLines={1}>
+                        {formatUuid(inv.uuid)}
+                      </Text>
+                      <Text className="font-sans text-2xs text-muted" numberOfLines={1}>
+                        {inv.name ?? inv.number}
+                      </Text>
+                    </View>
+                    <Text className="font-sans-semibold text-[13px] leading-[1.4] text-ink">
+                      {formatMoney(inv.total)}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <EmptyState title="No invoices yet" description="Sync your CFDIs to get started." />
+            )}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
 
-function SummaryCard({ title, value, accent }: SummaryCardProps): React.ReactElement {
-  const accentText =
-    accent === 'success'
-      ? 'text-success'
-      : accent === 'danger'
-        ? 'text-danger'
-        : 'text-primary';
+// Bars rise from y=127 to the top grid line (y=11) of the 154pt chart
+const BAR_MAX_HEIGHT = 116;
+const GRID_LINES = [
+  { top: 4, fraction: 1 },
+  { top: 61, fraction: 0.5 },
+  { top: 118, fraction: 0 },
+];
+
+/** 9,140 → 10,000; 52,000 → 60,000 */
+function niceCeiling(max: number): number {
+  if (max <= 0) return 0;
+  const magnitude = 10 ** Math.floor(Math.log10(max));
+  return Math.ceil(max / magnitude) * magnitude;
+}
+
+function SalesChart({ labels, values }: { labels: string[]; values: number[] }) {
+  const axisMax = niceCeiling(Math.max(...values));
+  const summary = labels.map((label, i) => `${label} ${formatMoney(values[i])}`).join(', ');
 
   return (
-    <View className="flex-1 rounded-lg border border-border bg-card p-3">
-      <Text className="mb-1 text-xs text-muted">{title}</Text>
-      <Text className={`text-base font-bold ${accentText}`}>
-        ${Number(value ?? 0).toFixed(2)}
-      </Text>
+    <View className="h-[154px]" accessible accessibilityLabel={`Monthly sales: ${summary}`}>
+      {GRID_LINES.map((line) => (
+        <View
+          key={line.top}
+          className="absolute left-0 right-0 flex-row items-center gap-[9px]"
+          style={{ top: line.top }}
+        >
+          <Text className="w-8 font-sans text-2xs text-placeholder">
+            {formatCompactMoney(axisMax * line.fraction)}
+          </Text>
+          <Image source={dashedGrid} resizeMode="repeat" className="h-px flex-1" />
+        </View>
+      ))}
+
+      <View className="absolute bottom-[5px] left-[46px] right-2.5 flex-row items-end justify-between">
+        {labels.map((label, i) => (
+          <View key={`${label}-${i}`} className="w-10 items-center gap-2">
+            <View
+              className="w-[18px] rounded-t-[3px] bg-primary"
+              style={{ height: (Math.max(values[i] ?? 0, 0) / axisMax) * BAR_MAX_HEIGHT }}
+            />
+            <Text className="font-sans text-2xs text-muted">{label}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }

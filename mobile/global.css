@@ -6,40 +6,79 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
+
+  /* Inter is loaded in App.tsx. React Native can't synthesize weights for
+     custom fonts, so each weight is its own family (use these, not font-bold). */
+  --font-sans: 'Inter_400Regular';
+  --font-sans-medium: 'Inter_500Medium';
+  --font-sans-semibold: 'Inter_600SemiBold';
+  --font-sans-bold: 'Inter_700Bold';
+
+  /* Fintor type scale */
+  --text-2xs: 10px;
+  --text-2xs--line-height: 1.4;
+  --text-xs: 12px;
+  --text-xs--line-height: 1.4;
+  --text-sm: 14px;
+  --text-sm--line-height: 1.4;
+  --text-base: 16px;
+  --text-base--line-height: 1.4;
+  --text-lg: 18px;
+  --text-lg--line-height: 1.4;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 1.4;
+  --text-4xl: 36px;
+  --text-4xl--line-height: 1.4;
 }
 
 @layer theme {
   :root {
     @variant light {
       --color-primary: #1a73e8;
+      --color-primary-pressed: #155bb8;
+      --color-primary-tint: #eaf2fe;
+      --color-on-primary: #ffffff;
+      --color-sage-ring: #8ab4f8;
       --color-bg: #f5f6f8;
       --color-card: #ffffff;
       --color-ink: #202124;
       --color-muted: #5f6368;
+      --color-placeholder: #9aa0a6;
       --color-border: #e8eaed;
+      --color-disabled: #dde5f0;
       --color-success: #1e8e3e;
+      --color-success-tint: #eaf5ed;
       --color-danger: #d93025;
+      --color-pending: #eab308;
+      --color-unreviewed: #9ca3af;
     }
 
     @variant dark {
       --color-primary: #8ab4f8;
+      --color-primary-pressed: #669df6;
+      --color-primary-tint: #303a4a;
+      --color-on-primary: #202124;
+      --color-sage-ring: #aecbfa;
       --color-bg: #202124;
       --color-card: #303134;
       --color-ink: #e8eaed;
       --color-muted: #9aa0a6;
+      --color-placeholder: #9aa0a6;
       --color-border: #5f6368;
-      --color-success: #81c995;
-      --color-danger: #f28b82;
+      --color-disabled: #3c4043;
+      --color-success: #1e8e3e;
+      --color-success-tint: #26352b;
+      --color-danger: #d93025;
+      --color-pending: #eab308;
+      --color-unreviewed: #9ca3af;
     }
   }
 }
 
 @layer utilities {
-  .input-field {
-    @apply rounded-md ring ring-border focus:ring-2 focus:ring-primary outline-none px-3 py-3 w-full;
-  }
-
-  .btn-primary {
-    @apply mt-5 bg-primary py-4 px-12 rounded-full text-white font-semibold text-lg;
+  /* Figma strokes take no layout space but RN borders do, so bordered
+     elements use the design padding minus the border width (16 - 1). */
+  .card {
+    @apply rounded-lg border border-border bg-card p-[15px];
   }
 }

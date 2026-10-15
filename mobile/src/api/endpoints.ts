@@ -38,7 +38,16 @@ export const getDashboardChartData = async (type: string) => {
     return response.data;
 };
 
-export const getRecentInvoices = async (limit: number) => {
+export type RecentInvoice = {
+    id: string;
+    uuid?: string;
+    /** Counterparty name (kept for older API responses; prefer `name`) */
+    number: string;
+    name?: string;
+    total: number;
+};
+
+export const getRecentInvoices = async (limit: number): Promise<RecentInvoice[]> => {
     const response = await AxiosInstance.get('dashboard/recent-invoices/', { params: { limit } });
     return response.data;
 };
@@ -125,6 +134,13 @@ export type SatDownloadRequest = {
     date_to: string;
     cfdis_count: number;
     error_message: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export const getSatDownloads = async (): Promise<SatDownloadRequest[]> => {
+    const response = await AxiosInstance.get('sat/download/');
+    return response.data;
 };
 
 export const createSatDownload = async (data: {
@@ -134,6 +150,19 @@ export const createSatDownload = async (data: {
     date_to: string;
 }): Promise<SatDownloadRequest> => {
     const response = await AxiosInstance.post('sat/download/', data);
+    return response.data;
+};
+
+export type Ticket = {
+    id: number;
+    sender_name: string;
+    ticket_date: string | null;
+    total: string | number;
+    created_at: string;
+};
+
+export const getTickets = async (): Promise<Ticket[]> => {
+    const response = await AxiosInstance.get('tickets/');
     return response.data;
 };
 

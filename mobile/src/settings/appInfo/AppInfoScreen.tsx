@@ -1,54 +1,57 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import TopAppBar from '../../components/TopAppBar';
+import FintorMark from '../../components/FintorMark';
+import DetailRow from '../../components/DetailRow';
+import Divider from '../../components/Divider';
+import SettingsRow from '../../components/SettingsRow';
+import ShieldIcon from '../../../assets/icons/shield.svg';
+import FileTextIcon from '../../../assets/icons/file-text.svg';
+import CircleHelpIcon from '../../../assets/icons/circle-help.svg';
 
 export default function SettingsAppInfoScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<any>();
   const version =
     Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '1.0.0';
 
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center px-4 py-2">
-        <Pressable hitSlop={8} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back-outline" size={24} color="#5f6368" />
-        </Pressable>
-        <Text className="ml-3 text-lg font-semibold text-ink">App Info</Text>
-      </View>
+      <TopAppBar title="App Info" />
 
-      <ScrollView contentContainerClassName="gap-4 p-4">
-        <View className="overflow-hidden rounded-lg border border-border bg-card">
-          <InfoRow label="App" value="Fintor" />
-          <InfoRow label="Tagline" value="Personal Tax Accountant" last={false} />
-          <InfoRow label="Version" value={version} last={false} />
-          <InfoRow label="Stack" value="Expo · Django" last />
+      <ScrollView
+        contentContainerClassName="gap-3 px-4 pt-3"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+      >
+        <View className="items-center gap-2.5 py-6">
+          <FintorMark size="lg" />
+          <Text className="font-sans-bold text-2xl text-ink">Fintor</Text>
+          <Text className="font-sans text-sm text-muted">Business clarity, every day.</Text>
         </View>
-      </ScrollView>
-    </View>
-  );
-}
 
-function InfoRow({
-  label,
-  value,
-  last = false,
-}: {
-  label: string;
-  value: string;
-  last?: boolean;
-}) {
-  return (
-    <View
-      className={`flex-row items-center justify-between px-4 py-3.5 ${
-        last ? '' : 'border-b border-border'
-      }`}
-    >
-      <Text className="text-sm text-muted">{label}</Text>
-      <Text className="text-sm text-ink">{value}</Text>
+        <View className="card gap-4">
+          <Text className="font-sans-semibold text-base text-ink">About this app</Text>
+          <DetailRow label="Version" value={version} />
+          <Divider />
+          <DetailRow label="Market" value="Mexico" />
+          <DetailRow label="Currency" value="MXN" />
+          <DetailRow label="Language" value="English" />
+        </View>
+
+        {/* No policy/support URLs exist yet; rows are not pressable until they do */}
+        <View className="card">
+          <SettingsRow icon={ShieldIcon} label="Privacy Policy" />
+          <Divider />
+          <SettingsRow icon={FileTextIcon} label="Terms of Service" />
+          <Divider />
+          <SettingsRow icon={CircleHelpIcon} label="Support" />
+        </View>
+
+        <Text className="text-center font-sans text-xs text-muted">
+          Fintor is not affiliated with SAT.
+        </Text>
+      </ScrollView>
     </View>
   );
 }

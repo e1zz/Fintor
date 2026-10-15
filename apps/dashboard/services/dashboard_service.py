@@ -16,16 +16,20 @@ class DashboardService:
             SatCfdi.all_objects.filter(tenant_id=tenant_id)
             .order_by('-issue_date')[:limit]
         )
-        return [
-            {
+        results = []
+        for i in invoices:
+            counterparty = (
+                i.receiver_name if i.document_type == 'issued' else i.sender_name
+            )
+            results.append({
                 'id': str(i.id),
-                'number': i.receiver_name
-                if i.document_type == 'issued'
-                else i.sender_name,
+                'uuid': str(i.uuid),
+                'name': counterparty,
+                # legacy key, same value as `name`
+                'number': counterparty,
                 'total': float(i.total),
-            }
-            for i in invoices
-        ]
+            })
+        return results
 
     def get_chart_data(self, tenant_id, chart_type='monthly'):
         # Shape for react-native-chart-kit BarChart

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Text, View, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { getApiError } from '../../api/client';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Button from '../../components/Button';
+import FintorMark from '../../components/FintorMark';
+import TextField from '../../components/TextField';
 
 type RegisterNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -51,76 +54,72 @@ export default function RegisterScreen() {
       className='flex-1 bg-bg'
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerClassName='flex-grow items-center justify-start p-6 pt-20' keyboardShouldPersistTaps='handled'>
-        <Text className='text-4xl font-bold text-ink mb-2'>Create Account</Text>
-        <Text className='text-lg text-muted mb-2'>Set up your business account</Text>
+      <ScrollView
+        contentContainerClassName='flex-grow gap-3 px-4'
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 12 }}
+        keyboardShouldPersistTaps='handled'
+      >
+        <View className='gap-2.5 pb-2 pt-3'>
+          <FintorMark />
+          <Text className='font-sans-bold text-2xl text-ink'>Create Account</Text>
+          <Text className='font-sans text-sm text-muted'>Set up your business account</Text>
+        </View>
 
-        {error ? <Text className='text-danger'>{error}</Text> : null}
+        <View className='gap-2.5'>
+          {error ? <Text className='font-sans text-sm text-danger'>{error}</Text> : null}
 
-        <TextInput
-          className='mt-4 input-field'
-          placeholder="First Name"
-          placeholderTextColor="#999"
-          value={form.first_name}
-          onChangeText={v => updateField('first_name', v)}
-        />``
-        <TextInput
-          className='mt-4 input-field'
-          placeholder="Last Name"
-          placeholderTextColor="#999"
-          value={form.last_name}
-          onChangeText={v => updateField('last_name', v)}
-        />
-        <TextInput
-          className='mt-4 input-field'
-          placeholder="Email"
-          placeholderTextColor="#999"
-          value={form.email}
-          onChangeText={v => updateField('email', v)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          className='mt-4 input-field'
-          placeholder="Company Name"
-          placeholderTextColor="#999"
-          value={form.company_name}
-          onChangeText={v => updateField('company_name', v)}
-        />
-        <TextInput
-          className='mt-4 input-field'
-          placeholder="RFC"
-          placeholderTextColor="#999"
-          value={form.rfc}
-          onChangeText={v => updateField('rfc', v)}
-          autoCapitalize="characters"
-        />
-        <TextInput
-          className='mt-4 input-field'
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={form.password}
-          onChangeText={v => updateField('password', v)}
-          secureTextEntry
-        />
+          <TextField
+            size="compact"
+            placeholder="Company Name"
+            value={form.company_name}
+            onChangeText={v => updateField('company_name', v)}
+          />
+          <TextField
+            size="compact"
+            placeholder="First Name"
+            value={form.first_name}
+            onChangeText={v => updateField('first_name', v)}
+          />
+          <TextField
+            size="compact"
+            placeholder="Last Name"
+            value={form.last_name}
+            onChangeText={v => updateField('last_name', v)}
+          />
+          <TextField
+            size="compact"
+            placeholder="Email"
+            value={form.email}
+            onChangeText={v => updateField('email', v)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TextField
+            size="compact"
+            placeholder="RFC"
+            value={form.rfc}
+            onChangeText={v => updateField('rfc', v)}
+            autoCapitalize="characters"
+            autoCorrect={false}
+          />
+          <TextField
+            size="compact"
+            placeholder="Password"
+            value={form.password}
+            onChangeText={v => updateField('password', v)}
+            secureTextEntry
+          />
+        </View>
 
-          <Pressable
-            className='mt-5 btn-primary'
-            onPress={handleRegister}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className='text-white font-semibold'>Create Account</Text>
-            )}
-          </Pressable>
+        <Button title="Create Account" onPress={handleRegister} loading={loading} />
 
-        <Pressable onPress={() => navigation.goBack()}>
-          <Text className='text-primary underline mt-4'>Already have an account? Sign in</Text>
+        <Pressable className='self-center' onPress={() => navigation.goBack()}>
+          <Text className='font-sans text-sm text-primary'>Already have an account? Sign in</Text>
         </Pressable>
+
+        <Text className='text-center font-sans text-xs text-muted'>For your Mexican small business.</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-

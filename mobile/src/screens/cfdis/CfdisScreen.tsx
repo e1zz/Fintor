@@ -9,9 +9,22 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { SvgProps } from 'react-native-svg';
 import { useCfdis } from '../../hooks/useCFDi';
 import type { Cfdi } from '../../api/endpoints';
-import { Ionicons } from '@expo/vector-icons';
+import { formatDate, formatMoney, formatUuid } from '../../utils/format';
+import PageHeader from '../../components/PageHeader';
+import Chip from '../../components/Chip';
+import EmptyState from '../../components/EmptyState';
+import Divider from '../../components/Divider';
+import DetailRow from '../../components/DetailRow';
+import SearchIcon from '../../../assets/icons/search.svg';
+import ClearIcon from '../../../assets/icons/clear.svg';
+import ChevronDownIcon from '../../../assets/icons/chevron-down.svg';
+import ChevronUpIcon from '../../../assets/icons/chevron-up.svg';
+import ReviewConfirmedIcon from '../../../assets/icons/review-confirmed.svg';
+import ReviewPendingIcon from '../../../assets/icons/review-pending.svg';
+import ReviewNoneIcon from '../../../assets/icons/review-none.svg';
 
 type Filter = 'all' | 'issued' | 'received';
 
@@ -21,10 +34,12 @@ const CHIPS: { key: Filter; label: string }[] = [
   { key: 'received', label: 'Received' },
 ];
 
-const REVIEW_COLORS: Record<string, string> = {
-  none: 'bg-gray-400',
-  pending: 'bg-yellow-500',
-  confirmed: 'bg-green-500',
+type ReviewStatus = NonNullable<Cfdi['review_status']>;
+
+const REVIEW: Record<ReviewStatus, { Icon: React.FC<SvgProps>; label: string; className: string }> = {
+  none: { Icon: ReviewNoneIcon, label: 'Unreviewed', className: 'text-muted' },
+  pending: { Icon: ReviewPendingIcon, label: 'Pending', className: 'text-muted' },
+  confirmed: { Icon: ReviewConfirmedIcon, label: 'Confirmed', className: 'text-success' },
 };
 
 export default function CfdisScreen() {
@@ -51,88 +66,110 @@ export default function CfdisScreen() {
   const totalAmount = useMemo(() => list.reduce((sum, f) => sum + Number(f.total), 0), [list]);
   const currency = list[0]?.currency || 'MXN';
 
+  const header = (
+    <PageHeader
+      title="CFDIs"
+      subtitle={`${list.length} document${list.length === 1 ? '' : 's'}`}
+    />
+  );
+
   if (isLoading && !data) {
     return (
-      <View className="flex-1 items-center justify-center bg-bg" style={{ paddingTop: insets.top }}>
-        <ActivityIndicator size="large" colorClassName="accent-primary" />
+      <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
+        {header}
+        <View className="flex-1 items-center justify-center pb-7">
+          <ActivityIndicator colorClassName="accent-primary" />
+        </View>
       </View>
     );
   }
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center bg-bg p-6" style={{ paddingTop: insets.top }}>
-        <Text className="text-center text-danger">
-          {error?.message || 'Failed to load CFDIs'}
-        </Text>
+      <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
+        {header}
+        <View className="flex-1 items-center justify-center px-4 pb-7">
+          <Text className="text-center font-sans text-sm text-danger">
+            {error?.message || 'Failed to load CFDIs'}
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <View className="px-4 pb-2 pt-4">
-        <Text className="text-2xl font-bold text-ink">CFDIs</Text>
-        <Text className="mt-1 text-sm text-muted">
-          {list.length} document{list.length === 1 ? '' : 's'}
-        </Text>
-      </View>
-
-      <View className="mb-2 flex-row gap-2 px-4">
-        {CHIPS.map((chip) => {
-          const active = filter === chip.key;
-          return (
-            <Pressable
-              key={chip.key}
-              onPress={() => { setFilter(chip.key); setExpandedId(null); }}
-              className={`rounded-full px-4 py-2 ${active ? 'bg-primary' : 'border border-border bg-card'}`}
-            >
-              <Text className={active ? 'font-medium text-white' : 'text-ink'}>
-                {chip.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {header}
 
       <FlatList
         className="flex-1"
         data={list}
         keyExtractor={(item) => String(item.id)}
-        contentContainerClassName="gap-3 p-4"
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+        contentContainerClassName="grow gap-3 px-4 pb-7"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColorClassName="accent-primary"
+            colorsClassName="accent-primary"
+          />
+        }
         ListHeaderComponent={
-          <>
-            <View className="mb-3 flex-row items-center rounded-lg border border-border bg-card px-3 py-2.5">
-              <Ionicons name="search" size={18} color="#9aa0a6" />
+          <View className="gap-3">
+            <View className="flex-row gap-2">
+              {CHIPS.map((chip) => (
+                <Chip
+                  key={chip.key}
+                  label={chip.label}
+                  selected={filter === chip.key}
+                  onPress={() => { setFilter(chip.key); setExpandedId(null); }}
+                />
+              ))}
+            </View>
+
+            <View className="h-11.5 flex-row items-center gap-2.5 rounded-md border border-border bg-card px-[11px]">
+              <SearchIcon />
               <TextInput
-                className="ml-2 flex-1 text-base text-ink"
+                className="h-full flex-1 py-0 font-sans text-[14px] text-ink"
                 placeholder="Search by name or RFC..."
-                placeholderTextColor="#9aa0a6"
+                placeholderTextColorClassName="accent-placeholder"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+                autoCorrect={false}
+                returnKeyType="search"
               />
               {searchQuery ? (
-                <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={18} color="#9aa0a6" />
+                <Pressable
+                  onPress={() => setSearchQuery('')}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                  className="size-[18px]"
+                >
+                  <View className="absolute -left-[0.85px] -top-[0.85px]">
+                    <ClearIcon />
+                  </View>
                 </Pressable>
               ) : null}
             </View>
 
-            <View className="mb-1 flex-row items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
-              <Text className="text-sm text-muted">
+            <View className="flex-row justify-between">
+              <Text className="font-sans text-xs text-muted">
                 {list.length} doc{list.length === 1 ? '' : 's'}
               </Text>
-              <Text className="text-sm font-semibold text-ink">
-                ${Number(totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+              <Text className="font-sans-semibold text-[13px] leading-[1.4] text-ink">
+                {formatMoney(totalAmount)} {currency}
               </Text>
             </View>
-          </>
+          </View>
         }
         ListEmptyComponent={
-          <Text className="py-8 text-center text-muted">
-            {searchQuery ? 'No CFDIs match your search' : 'No CFDIs yet'}
-          </Text>
+          searchQuery ? (
+            <EmptyState fill title="No CFDIs match your search" description="Try another business name or RFC." />
+          ) : (
+            <EmptyState fill title="No CFDIs yet" description="Connect your SAT credentials to sync documents." />
+          )
         }
         renderItem={({ item }) => (
           <CfdiRow
@@ -158,53 +195,48 @@ function CfdiRow({
   const isIssued = cfdi.document_type === 'issued';
   const name = isIssued ? cfdi.receiver_name : cfdi.sender_name;
   const rfc = isIssued ? cfdi.receiver_rfc : cfdi.sender_rfc;
-  const dateLabel = cfdi.issue_date
-    ? new Date(cfdi.issue_date).toLocaleDateString()
-    : '—';
+  const review = REVIEW[cfdi.review_status || 'none'];
+  const ivaWithheld = Number(cfdi.iva_withholding ?? 0);
+  const isrWithheld = Number(cfdi.isr_withholding ?? 0);
+  // total = subtotal + IVA − withholdings
+  const iva = Number(cfdi.total) - Number(cfdi.subtotal) + ivaWithheld + isrWithheld;
 
   return (
     <Pressable
       onPress={onToggle}
-      className="rounded-lg border border-border bg-card p-3 active:opacity-80"
+      accessibilityRole="button"
+      accessibilityState={{ expanded: isExpanded }}
+      className={`card active:opacity-80 ${isExpanded ? 'gap-3' : ''}`}
     >
-      <View className="flex-row items-start justify-between">
-        <View className="mr-3 flex-1">
-          <View className="flex-row items-center gap-2">
-            <View className={`h-2 w-2 rounded-full ${REVIEW_COLORS[cfdi.review_status || 'none']}`} />
-            <Text className="font-medium text-ink" numberOfLines={1}>
-              {name || '—'}
-            </Text>
-          </View>
-          <Text className="mt-0.5 text-xs text-muted">{rfc || '—'}</Text>
-          <Text className="mt-0.5 text-xs text-muted">
-            {isIssued ? 'Issued' : 'Received'} · {dateLabel}
+      <View className="flex-row items-start gap-2.5">
+        <review.Icon />
+        <View className="flex-1 gap-[5px]">
+          <Text className="font-sans-semibold text-sm text-ink" numberOfLines={1}>
+            {name || '—'}
+          </Text>
+          <Text className="font-sans text-xs text-muted">{rfc || '—'}</Text>
+          <Text className="font-sans text-[11px] leading-[1.4] text-muted">
+            {isIssued ? 'Issued' : 'Received'} · {formatDate(cfdi.issue_date)}
           </Text>
         </View>
-        <Text className={`font-bold ${isIssued ? 'text-success' : 'text-danger'}`}>
-          ${Number(cfdi.total).toFixed(2)}
-        </Text>
+        <View className="items-end gap-4">
+          <Text className={`font-sans-semibold text-sm ${isIssued ? 'text-success' : 'text-danger'}`}>
+            {formatMoney(cfdi.total)}
+          </Text>
+          {isExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+        </View>
       </View>
 
       {isExpanded && (
-        <View className="mt-3 border-t border-border pt-3">
-          <DetailRow label="Subtotal" value={`$${Number(cfdi.subtotal).toFixed(2)}`} />
-          <DetailRow label="IVA" value={cfdi.iva_withholding ? `$${Number(cfdi.iva_withholding).toFixed(2)}` : '—'} />
-          <DetailRow label="ISR" value={cfdi.isr_withholding ? `$${Number(cfdi.isr_withholding).toFixed(2)}` : '—'} />
-          <DetailRow label="UUID" value={cfdi.uuid} />
-          {cfdi.status ? <DetailRow label="Status" value={cfdi.status.charAt(0).toUpperCase() + cfdi.status.slice(1)} /> : null}
-        </View>
+        <>
+          <Divider />
+          <DetailRow label="Subtotal" value={formatMoney(cfdi.subtotal)} />
+          <DetailRow label="IVA · 16%" value={formatMoney(iva)} />
+          <DetailRow label="ISR retained" value={formatMoney(isrWithheld)} />
+          <DetailRow label="UUID" value={formatUuid(cfdi.uuid)} />
+          <DetailRow label="Status" value={review.label} valueClassName={review.className} />
+        </>
       )}
     </Pressable>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="mt-1 flex-row items-center justify-between">
-      <Text className="text-xs text-muted">{label}</Text>
-      <Text className="max-w-[200px] text-xs text-ink" numberOfLines={1}>
-        {value}
-      </Text>
-    </View>
   );
 }

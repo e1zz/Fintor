@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Text, TextInput,ScrollView, Image, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { Text, View, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { getApiError } from '../../api/client';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Button from '../../components/Button';
+import FintorMark from '../../components/FintorMark';
+import TextField from '../../components/TextField';
+import LockKeyholeIcon from '../../../assets/icons/lock-keyhole-14.svg';
 
 
 type LoginNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -40,52 +44,57 @@ export default function LoginScreen() {
     <KeyboardAvoidingView className='flex-1 bg-bg'
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerClassName='flex-grow items-center justify-start p-6 pt-20' keyboardShouldPersistTaps='handled'>
-          <Image source={require('../../../assets/favicon.png')} className='w-12 h-12 mb-6 mt-10' />
-          <Text className='text-4xl font-bold text-ink mb-2'>Fintor</Text>
-          <Text className='text-lg text-muted mb-2'>Sign in to your account</Text>
+      <ScrollView
+        contentContainerClassName='flex-grow gap-3 px-4'
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 12 }}
+        keyboardShouldPersistTaps='handled'
+      >
+        <View className='flex-1 justify-center gap-7'>
+          <View className='items-center gap-3.5'>
+            <FintorMark />
+            <Text className='font-sans-bold text-4xl text-ink'>Fintor</Text>
+            <Text className='font-sans text-lg text-muted'>Sign in to your account</Text>
+          </View>
 
-          {error ? <Text className='text-danger'>{error}</Text> : null}
+          <View className='gap-3.5'>
+            {error ? <Text className='font-sans text-sm text-danger'>{error}</Text> : null}
 
-          <TextInput
-            className='mt-4 input-field'
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+            <TextField
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+            />
 
-          <TextInput
-            className='mt-4 input-field'
-            placeholder="Password"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+            <TextField
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoComplete="password"
+              textContentType="password"
+            />
 
-          <Pressable
-            className='mt-5 btn-primary'
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className='text-white font-semibold'>Sign In</Text>
-            )}
+            <Button title="Sign In" onPress={handleLogin} loading={loading} />
+          </View>
+
+          <Pressable className='self-center' onPress={() => navigation.navigate('ResetPassword')}>
+            <Text className='font-sans text-[14px] text-primary underline'>Forgot password?</Text>
           </Pressable>
 
-          <Pressable onPress={() => navigation.navigate('ResetPassword')}>
-            <Text className='mt-4 text-primary underline'>Forgot password?</Text>
+          <Pressable className='self-center' onPress={() => navigation.navigate('Register')}>
+            <Text className='font-sans text-sm text-primary'>Don't have an account? Sign up</Text>
           </Pressable>
+        </View>
 
-          <Pressable onPress={() => navigation.navigate('Register')}>
-            <Text className='mt-4 text-primary underline'>Don't have an account? Sign up</Text>
-          </Pressable>
+        <View className='flex-row items-center justify-center gap-1.5'>
+          <LockKeyholeIcon />
+          <Text className='font-sans text-xs text-muted'>Your business, securely in view.</Text>
+        </View>
       </ScrollView>
 
     </KeyboardAvoidingView>
